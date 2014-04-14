@@ -115,36 +115,70 @@ int main(int argc, char **argv){
 	}
 	*/
 
-	//Now lets draw our image
-	//First clear the renderer
-	SDL_RenderClear(renderer);
+	//Our event structure
+	SDL_Event e;
+	//For tracking if we want to quit
+	bool quit = false;
 
-	//Get the width and height from the texture so we know how much to move x,y by
-	//to tile it correctly
-	int bW, bH;
-	SDL_QueryTexture(background, NULL, NULL, &bW, &bH);
-	//We want to tile our background so draw it 4 times
-	renderTexture(background, renderer, 0, 0);
-	renderTexture(background, renderer, bW, 0);
-	renderTexture(background, renderer, 0, bH);
-	renderTexture(background, renderer, bW, bH);
+	while (!quit){
+		//Read user input & handle it
+		//Read any events that occured, for now we'll just quit if any event occurs
+		while (SDL_PollEvent(&e)){
+			//If user closes the window
+			if (e.type == SDL_QUIT){
+				quit = true;
+			}
+			//If user presses any key
+			if (e.type == SDL_KEYDOWN){
+				quit = true;
+			}
+			//If user clicks the mouse
+			if (e.type == SDL_MOUSEBUTTONDOWN){
+				quit = true;
+			}
+		}
+		//Render our scene
 
-	//Draw our image in the center of the window
-	//We need the foreground image's width to properly compute the position
-	//of it's top left corner so that the image will be centered
-	int iW, iH;
-	SDL_QueryTexture(image, NULL, NULL, &iW, &iH);
-	int x = SCREEN_WIDTH / 2 - iW / 2;
-	int y = SCREEN_HEIGHT / 2 - iH / 2;
-	renderTexture(image, renderer, x, y);
+		//Now lets draw our image
+		//First clear the renderer
+		SDL_RenderClear(renderer);
 
-	//Draw the texture
-	//SDL_RenderCopy(ren, tex, NULL, NULL);
-	//Update the screen
-	SDL_RenderPresent(renderer);
+		//Get the width and height from the texture so we know how much to move x,y by
+		//to tile it correctly
+		int bW, bH;
+		SDL_QueryTexture(background, NULL, NULL, &bW, &bH);
 
+		//Draw the tiles by calculating their positions
+		for (int i = 0; i < bW * bH; ++i){
+			int x = i % bW;
+			int y = i / bW;
+			renderTexture(background, renderer, x * bW, y * bH);
+		}
+
+
+		//We want to tile our background so draw it 4 times
+	/*	renderTexture(background, renderer, 0, 0);
+		renderTexture(background, renderer, bW, 0);
+		renderTexture(background, renderer, 0, bH);
+		renderTexture(background, renderer, bW, bH);
+	*/
+		//Draw our image in the center of the window
+		//We need the foreground image's width to properly compute the position
+		//of it's top left corner so that the image will be centered
+		int iW, iH;
+		SDL_QueryTexture(image, NULL, NULL, &iW, &iH);
+		int x = SCREEN_WIDTH / 2 - iW / 2;
+		int y = SCREEN_HEIGHT / 2 - iH / 2;
+		renderTexture(image, renderer, x, y);
+
+		//Draw the texture
+		//SDL_RenderCopy(ren, tex, NULL, NULL);
+		//Update the screen
+		SDL_RenderPresent(renderer);
+
+	}
 	//Have the program wait for 2000ms so we get a chance to see the screen
-	SDL_Delay(2000);
+	//SDL_Delay(2000);
 
 	//Clean up our objects and quit
 	SDL_DestroyTexture(background);
