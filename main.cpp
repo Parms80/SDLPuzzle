@@ -1,9 +1,15 @@
 #include <iostream>
 #include <SDL.h>
-// #include <SDL_image.h>
+#include <SDL_image.h>
+//#include "Render.h"
 
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
+const int NUM_ROWS = 8;
+const int NUM_COLUMNS = 8;
+
+int xOffset = 0;
+int yOffset = 50;
 
 /*
  * Log an SDL error with some error message to the output stream of our choice
@@ -16,47 +22,52 @@ void logSDLError(std::ostream &os, const std::string &msg){
 
 
 /*
- * Loads a BMP image into a texture on the rendering device
- * @param file The BMP image file to load
+ * Loads an image into a texture on the rendering device
+ * @param file The image file to load
  * @param ren The renderer to load the texture onto
  * @return the loaded texture, or nullptr if something went wrong.
  */
 SDL_Texture* loadTexture(const std::string &file, SDL_Renderer *ren){
-	SDL_Texture *texture = nullptr;
-	//Load the image
-	SDL_Surface *loadedImage = SDL_LoadBMP(file.c_str());
-	//If the loading went ok, convert to texture and return the texture
-	if (loadedImage != nullptr){
-		texture = SDL_CreateTextureFromSurface(ren, loadedImage);
-		SDL_FreeSurface(loadedImage);
-		//Make sure converting went ok too
-		if (texture == nullptr){
-			logSDLError(std::cout, "CreateTextureFromSurface");
-		}
-	}
-	else {
-		logSDLError(std::cout, "LoadBMP");
+	SDL_Texture *texture = IMG_LoadTexture(ren, file.c_str());
+	if (texture == nullptr){	
+		logSDLError(std::cout, "LoadTexture");
 	}
 	return texture;
 }
 
 
 /*
- * Draw an SDL_Texture to an SDL_Renderer at position x, y, preserving
- * the texture's width and height
+ * Draw an SDL_Texture to an SDL_Renderer at position x, y, with some desired
+ * width and height
  * @param tex The source texture we want to draw
- * @param ren The renderer we want to draw too
+ * @param rend The renderer we want to draw too
  * @param x The x coordinate to draw too
  * @param y The y coordinate to draw too
+ * @param w The width of the texture to draw
+ * @param h The height of the texture to draw
  */
-void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y, int w, int h){
 	//Setup the destination rectangle to be at the position we want
 	SDL_Rect dst;
 	dst.x = x;
 	dst.y = y;
-	//Query the texture to get its width and height to use
-	SDL_QueryTexture(tex, NULL, NULL, &dst.w, &dst.h);
+	dst.w = w;
+	dst.h = h;
 	SDL_RenderCopy(ren, tex, NULL, &dst);
+}
+
+/*
+ * Draw an SDL_Texture to an SDL_Renderer at position x, y, preserving
+ * the texture's width and height
+ * @param tex The source texture we want to draw
+ * @param rend The renderer we want to draw too
+ * @param x The x coordinate to draw too
+ * @param y The y coordinate to draw too
+ */
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
+	int w, h;
+	SDL_QueryTexture(tex, NULL, NULL, &w, &h);
+	renderTexture(tex, ren, x, y, w, h);
 }
 
 
@@ -85,7 +96,13 @@ int main(int argc, char **argv){
 
 	//The textures we'll be using
 	SDL_Texture *background = loadTexture("res/asteroid_texture.bmp", renderer);
-	SDL_Texture *image = loadTexture("res/mickey.bmp", renderer);
+	SDL_Texture *image = loadTexture("res/Blue.png", renderer);
+	SDL_Texture *blueGem = loadTexture("res/Blue.png", renderer);
+	SDL_Texture *greenGem = loadTexture("res/Green.png", renderer);
+	SDL_Texture *purpleGem = loadTexture("res/Purple.png", renderer);
+	SDL_Texture *redGem = loadTexture("res/Red.png", renderer);
+	SDL_Texture *yellowGem = loadTexture("res/Yellow.png", renderer);
+	SDL_Texture *gems[] = {blueGem, greenGem, purpleGem, redGem, yellowGem};
 	//Make sure they both loaded ok
 	if (background == nullptr || image == nullptr){
 		// cleanup(background, image, renderer, window);
@@ -95,30 +112,21 @@ int main(int argc, char **argv){
 		return 4;
 	}
 
-	/*
-	SDL_Surface *bmp = SDL_LoadBMP("res/asteroid_texture.bmp");
-	if (bmp == nullptr){
-		SDL_DestroyRenderer(ren);
-		SDL_DestroyWindow(win);
-		std::cout << "SDL_LoadBMP Error: " << SDL_GetError() << std::endl;
-		return 1;
-	}
-
-	SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, bmp);
-	SDL_FreeSurface(bmp);
-	if (tex == nullptr){
-		SDL_DestroyRenderer(ren);
-		SDL_DestroyWindow(win);
-		std::cout << "SDL_CreateTextureFromSurface Error: "
-			<< SDL_GetError() << std::endl;
-		return 1;
-	}
-	*/
-
 	//Our event structure
 	SDL_Event e;
 	//For tracking if we want to quit
 	bool quit = false;
+	//Render* gameRenderer = new Render();
+	int gridArray[NUM_ROWS][NUM_COLUMNS] = 
+						  {{0,2,0,0,0,0,0,0},
+						   {1,0,0,0,0,0,0,0},
+						   {0,0,0,3,0,0,0,0},
+						   {0,0,4,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0}};
+
 
 	while (!quit){
 		//Read user input & handle it
@@ -155,13 +163,24 @@ int main(int argc, char **argv){
 			renderTexture(background, renderer, x * bW, y * bH);
 		}
 
+		// Draw the gems
+		int columnWidth = SCREEN_WIDTH / (NUM_COLUMNS+1);
+		for (int row = 0; row < NUM_ROWS; row++)
+		{
+			int y = (SCREEN_HEIGHT / NUM_ROWS) * row;
 
-		//We want to tile our background so draw it 4 times
-	/*	renderTexture(background, renderer, 0, 0);
-		renderTexture(background, renderer, bW, 0);
-		renderTexture(background, renderer, 0, bH);
-		renderTexture(background, renderer, bW, bH);
-	*/
+			for (int column = 0; column < NUM_COLUMNS; column++)
+			{
+				int x = columnWidth * column + columnWidth/2;
+
+				//if (gridArray[row][column] == 0)
+				{
+					renderTexture(gems[gridArray[row][column]], renderer, x, y);
+				}
+			}
+		}
+
+		xOffset++;
 		//Draw our image in the center of the window
 		//We need the foreground image's width to properly compute the position
 		//of it's top left corner so that the image will be centered
@@ -169,7 +188,7 @@ int main(int argc, char **argv){
 		SDL_QueryTexture(image, NULL, NULL, &iW, &iH);
 		int x = SCREEN_WIDTH / 2 - iW / 2;
 		int y = SCREEN_HEIGHT / 2 - iH / 2;
-		renderTexture(image, renderer, x, y);
+		renderTexture(image, renderer, x+xOffset, y);
 
 		//Draw the texture
 		//SDL_RenderCopy(ren, tex, NULL, NULL);
@@ -181,8 +200,20 @@ int main(int argc, char **argv){
 	//SDL_Delay(2000);
 
 	//Clean up our objects and quit
+	//gameRenderer = NULL;
 	SDL_DestroyTexture(background);
 	SDL_DestroyTexture(image);
+	SDL_DestroyTexture(blueGem);
+	SDL_DestroyTexture(greenGem);
+	SDL_DestroyTexture(purpleGem);
+	SDL_DestroyTexture(redGem);
+	SDL_DestroyTexture(yellowGem);
+
+	for (int i = 0; i < sizeof(*gems); i++)
+	{
+		gems[i] = NULL;
+	}
+
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
