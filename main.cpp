@@ -8,8 +8,8 @@ const int SCREEN_HEIGHT = 480;
 const int NUM_ROWS = 8;
 const int NUM_COLUMNS = 8;
 
-int xOffset = 0;
-int yOffset = 50;
+// int xOffset = 0;
+// int yOffset = 50;
 
 /*
  * Log an SDL error with some error message to the output stream of our choice
@@ -71,6 +71,123 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
 }
 
 
+int** initGrid()
+{
+	int testGridArray[NUM_ROWS][NUM_COLUMNS] = 
+						  {{1,2,0,0,0,0,0,0},
+						   {1,0,0,0,0,0,0,0},
+						   {1,0,0,3,3,3,0,0},
+						   {0,0,4,0,0,3,0,0},
+						   {0,0,0,0,0,3,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,2,2,2}};
+
+	int** pGrid = new int*[NUM_ROWS];
+
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		pGrid[row] = new int[NUM_COLUMNS];
+
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			//pGrid[row][column] = rand() % 5;
+			pGrid[row][column] = testGridArray[row][column];
+		}
+	}
+
+	return pGrid;
+}
+
+
+void checkMatchRow(int** pGrid, int row, int column)
+{
+	// Now check for at least 2 adjacent matching gems below
+	if (row < NUM_ROWS-2 && 
+		pGrid[row+1][column] == pGrid[row][column] && 
+		pGrid[row+2][column] == pGrid[row][column])
+	{
+		// Continue marking matching gems until reached a different gem
+		bool matchRow = true;
+		int j = 1;
+		while (matchRow && row+j < NUM_ROWS)
+		{
+			if (pGrid[row+j][column] == pGrid[row][column])
+			{
+				pGrid[row+j][column] = -1;
+				j++;
+			}
+			else
+			{
+				matchRow = false;
+			}
+		}
+		pGrid[row][column] = -1;	// Get rid of origin gem
+	}
+}
+
+void checkMatch(int** pGrid, int numGemTypes)
+{
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		for (int column = 0; column < NUM_COLUMNS-2; column++)
+		{
+			if (pGrid[row][column] != -1)
+			{
+				// Check for at least 2 adjacent matching gems to the right
+				if (pGrid[row][column+1] == pGrid[row][column] && pGrid[row][column+2] == pGrid[row][column])
+				{
+					// Continue marking matching gems until reached a different gem
+					bool match = true;
+					int i = 1;
+					while (match && column+i < NUM_COLUMNS)
+					{
+						if (pGrid[row][column+i] == pGrid[row][column])
+						{
+							// Now check for at least 2 adjacent matching gems below
+							// if (row < NUM_ROWS-2 && 
+							// 	pGrid[row+1][column+i] == pGrid[row][column+i] && 
+							// 	pGrid[row+2][column+i] == pGrid[row][column+i])
+							// {
+							// 	// Continue marking matching gems until reached a different gem
+							// 	bool matchRow = true;
+							// 	int j = 1;
+							// 	while (matchRow && row+j < NUM_ROWS)
+							// 	{
+							// 		if (pGrid[row+j][column+i] == pGrid[row][column+i])
+							// 		{
+							// 			pGrid[row+j][column+i] = -1;
+							// 			j++;
+							// 		}
+							// 		else
+							// 		{
+							// 			matchRow = false;
+							// 		}
+							// 	}
+							// }
+							checkMatchRow(pGrid, row, column+i);
+
+							pGrid[row][column+i] = -1;
+							i++;
+						}
+						else
+						{
+							match = false;
+						}
+					}
+					pGrid[row][column] = -1;	// Get rid of origin gem
+				}
+				else
+				{
+					checkMatchRow(pGrid, row, column);
+				}
+			}
+		}
+	}
+}
+
+
+
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
 		logSDLError(std::cout, "SDL_Init");
@@ -117,7 +234,7 @@ int main(int argc, char **argv){
 	//For tracking if we want to quit
 	bool quit = false;
 	//Render* gameRenderer = new Render();
-	int gridArray[NUM_ROWS][NUM_COLUMNS] = 
+	/*int gridArray[NUM_ROWS][NUM_COLUMNS] = 
 						  {{0,2,0,0,0,0,0,0},
 						   {1,0,0,0,0,0,0,0},
 						   {0,0,0,3,0,0,0,0},
@@ -126,7 +243,10 @@ int main(int argc, char **argv){
 						   {0,0,0,0,0,0,0,0},
 						   {0,0,0,0,0,0,0,0},
 						   {0,0,0,0,0,0,0,0}};
+	*/
 
+	int** pGridArray = initGrid();
+	checkMatch(pGridArray, sizeof(*gems));
 
 	while (!quit){
 		//Read user input & handle it
@@ -164,31 +284,34 @@ int main(int argc, char **argv){
 		}
 
 		// Draw the gems
-		int columnWidth = SCREEN_WIDTH / (NUM_COLUMNS+1);
+		int columnWidth = SCREEN_WIDTH / NUM_COLUMNS;
+		int rowHeight = SCREEN_HEIGHT / NUM_ROWS;
+		int gemWidth, gemHeight;
+		int x, y;
+		SDL_QueryTexture(gems[0], NULL, NULL, &gemWidth, &gemHeight);
 		for (int row = 0; row < NUM_ROWS; row++)
 		{
-			int y = (SCREEN_HEIGHT / NUM_ROWS) * row;
+			y = rowHeight * row + rowHeight/2 - gemHeight/2;
 
 			for (int column = 0; column < NUM_COLUMNS; column++)
 			{
-				int x = columnWidth * column + columnWidth/2;
-
-				//if (gridArray[row][column] == 0)
+				if (pGridArray[row][column] != -1)
 				{
-					renderTexture(gems[gridArray[row][column]], renderer, x, y);
+					x = columnWidth * column + columnWidth/2 - gemWidth/2;
+					renderTexture(gems[pGridArray[row][column]], renderer, x, y);
 				}
 			}
 		}
 
-		xOffset++;
+		// xOffset++;
 		//Draw our image in the center of the window
 		//We need the foreground image's width to properly compute the position
 		//of it's top left corner so that the image will be centered
-		int iW, iH;
-		SDL_QueryTexture(image, NULL, NULL, &iW, &iH);
-		int x = SCREEN_WIDTH / 2 - iW / 2;
-		int y = SCREEN_HEIGHT / 2 - iH / 2;
-		renderTexture(image, renderer, x+xOffset, y);
+		// int iW, iH;
+		// SDL_QueryTexture(image, NULL, NULL, &iW, &iH);
+		// int x = SCREEN_WIDTH / 2 - iW / 2;
+		// int y = SCREEN_HEIGHT / 2 - iH / 2;
+		// renderTexture(image, renderer, x+xOffset, y);
 
 		//Draw the texture
 		//SDL_RenderCopy(ren, tex, NULL, NULL);
@@ -212,7 +335,15 @@ int main(int argc, char **argv){
 	for (int i = 0; i < sizeof(*gems); i++)
 	{
 		gems[i] = NULL;
+		//SDL_DestroyTexture(gems[i]);
 	}
+
+
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		delete [] pGridArray[row];
+	}
+	delete [] pGridArray;
 
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
