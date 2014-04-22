@@ -102,17 +102,18 @@ int** initGrid()
 
 void checkMatchRow(int** pGrid, int row, int column)
 {
+	int gemToCompare = pGrid[row][column];
 	// Now check for at least 2 adjacent matching gems below
 	if (row < NUM_ROWS-2 && 
-		pGrid[row+1][column] == pGrid[row][column] && 
-		pGrid[row+2][column] == pGrid[row][column])
+		pGrid[row+1][column] == gemToCompare && 
+		pGrid[row+2][column] == gemToCompare)
 	{
 		// Continue marking matching gems until reached a different gem
 		bool matchRow = true;
 		int j = 1;
 		while (matchRow && row+j < NUM_ROWS)
 		{
-			if (pGrid[row+j][column] == pGrid[row][column])
+			if (pGrid[row+j][column] == gemToCompare)
 			{
 				pGrid[row+j][column] = -1;
 				j++;
@@ -132,17 +133,18 @@ void checkMatch(int** pGrid, int numGemTypes)
 	{
 		for (int column = 0; column < NUM_COLUMNS-2; column++)
 		{
-			if (pGrid[row][column] != -1)
+			int gemToCompare = pGrid[row][column];
+			if (gemToCompare != -1)
 			{
 				// Check for at least 2 adjacent matching gems to the right
-				if (pGrid[row][column+1] == pGrid[row][column] && pGrid[row][column+2] == pGrid[row][column])
+				if (pGrid[row][column+1] == gemToCompare && pGrid[row][column+2] == gemToCompare)
 				{
 					// Continue marking matching gems until reached a different gem
 					bool match = true;
 					int i = 1;
 					while (match && column+i < NUM_COLUMNS)
 					{
-						if (pGrid[row][column+i] == pGrid[row][column])
+						if (pGrid[row][column+i] == gemToCompare)
 						{
 							// Now check for at least 2 adjacent matching gems below
 							// if (row < NUM_ROWS-2 && 
@@ -186,7 +188,63 @@ void checkMatch(int** pGrid, int numGemTypes)
 	}
 }
 
+/*
+void checkMatch(int** pGrid, int numGemTypes)
+{
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		int column = 0;
+		while (column < NUM_COLUMNS-2)
+		//for (int column = 0; column < NUM_COLUMNS-2; column++)
+		{
+			int gemToCompare = pGrid[row][column];
+			int numMatches = 0;
 
+			if (gemToCompare != -1)
+			{
+				// Check for at least 2 adjacent matching gems to the right
+				//if (pGrid[row][column+1] == pGrid[row][column] && pGrid[row][column+2] == pGrid[row][column])
+				{
+					// Continue marking matching gems until reached a different gem
+					bool match = true;
+					int i = 1;
+					while (match && column+i < NUM_COLUMNS)
+					{
+						if (pGrid[row][column+i] == gemToCompare)
+						{
+							numMatches++;
+							i++;
+							std::cout << "numMatches = " << numMatches << "\n";
+						}
+						else
+						{
+							match = false;
+						}
+					}
+					//pGrid[row][column] = -1;	// Get rid of origin gem
+				}
+				// else
+				// {
+				// 	checkMatchRow(pGrid, row, column);
+				// }
+				if (numMatches >= 3)
+				{
+					int j;
+					for (j = 0; j < numMatches; j++)
+					{
+						pGrid[row][column+j] = -1;
+					}
+					column = column+j;
+				}
+			}
+			else
+			{
+				column++;
+			}
+		}
+	}
+}
+*/
 
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
