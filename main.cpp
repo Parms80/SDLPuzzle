@@ -126,7 +126,7 @@ void checkMatchRow(int** pGrid, int row, int column)
 		pGrid[row][column] = -1;	// Get rid of origin gem
 	}
 }
-
+/*
 void checkMatch(int** pGrid, int numGemTypes)
 {
 	for (int row = 0; row < NUM_ROWS; row++)
@@ -187,21 +187,23 @@ void checkMatch(int** pGrid, int numGemTypes)
 		}
 	}
 }
+*/
 
-/*
 void checkMatch(int** pGrid, int numGemTypes)
 {
 	for (int row = 0; row < NUM_ROWS; row++)
 	{
 		int column = 0;
-		while (column < NUM_COLUMNS-2)
+		while (column < NUM_COLUMNS)
 		//for (int column = 0; column < NUM_COLUMNS-2; column++)
 		{
+			std::cout << "row = " << row << ", column = " << column << "\n";
 			int gemToCompare = pGrid[row][column];
-			int numMatches = 0;
+			int numMatches = 1;
 
 			if (gemToCompare != -1)
 			{
+				std::cout << "1\n";
 				// Check for at least 2 adjacent matching gems to the right
 				//if (pGrid[row][column+1] == pGrid[row][column] && pGrid[row][column+2] == pGrid[row][column])
 				{
@@ -210,6 +212,8 @@ void checkMatch(int** pGrid, int numGemTypes)
 					int i = 1;
 					while (match && column+i < NUM_COLUMNS)
 					{
+						std::cout << "1.1: column+i = " << (column+i) << ", pGrid["<<row<<"]["<<(column+i)<<"] = "<<pGrid[row][column+i]<<
+						", gemToCompare = "<<gemToCompare<<"\n";
 						if (pGrid[row][column+i] == gemToCompare)
 						{
 							numMatches++;
@@ -225,8 +229,9 @@ void checkMatch(int** pGrid, int numGemTypes)
 				}
 				// else
 				// {
-				// 	checkMatchRow(pGrid, row, column);
+					checkMatchRow(pGrid, row, column);
 				// }
+				std::cout << "2: numMatches = " << numMatches << "\n";
 				if (numMatches >= 3)
 				{
 					int j;
@@ -235,16 +240,25 @@ void checkMatch(int** pGrid, int numGemTypes)
 						pGrid[row][column+j] = -1;
 					}
 					column = column+j;
+
+				std::cout << "3: column = " << column << "\n";
+				}
+				else
+				{
+					std::cout << "4: column = " << column << "\n";
+					column++;
 				}
 			}
 			else
 			{
+
+				std::cout << "4: column = " << column << "\n";
 				column++;
 			}
 		}
 	}
 }
-*/
+
 
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
