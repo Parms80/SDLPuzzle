@@ -1,15 +1,36 @@
 #include <iostream>
 #include <SDL.h>
 #include <SDL_image.h>
-//#include "Render.h"
+// #include "Render.h"
 
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 const int NUM_ROWS = 8;
 const int NUM_COLUMNS = 8;
 
+const int GAMESTATE_INIT = 0;
+const int GAMESTATE_CHECKDROP = 1;
+const int GAMESTATE_DROP = 2;
+const int GAMESTATE_AWAIT_INPUT = 3;
+
+const int GEMSTATE_IDLE = 0;
+const int GEMSTATE_FALL = 1;
+const int GEMSTATE_DEAD = 2;
+
 // int xOffset = 0;
 // int yOffset = 50;
+
+
+struct gem
+{
+	float x;
+	float y;
+	float velocity;
+	int type;
+	int state;
+	int row;
+	int column;
+};
 
 /*
  * Log an SDL error with some error message to the output stream of our choice
@@ -71,8 +92,10 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
 }
 
 
-int** initGrid()
+int** initGrid(gem* pGems)
 {
+	int columnWidth = SCREEN_WIDTH / NUM_COLUMNS;
+	int rowHeight = SCREEN_HEIGHT / NUM_ROWS;
 	int testGridArray[NUM_ROWS][NUM_COLUMNS] = 
 						  {{1,2,0,0,0,0,0,0},
 						   {1,0,0,0,0,0,0,0},
@@ -91,16 +114,30 @@ int** initGrid()
 
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			//pGrid[row][column] = rand() % 5;
-			pGrid[row][column] = testGridArray[row][column];
+			pGrid[row][column] = rand() % 5;
+			// pGrid[row][column] = testGridArray[row][column];
+			pGems[row*NUM_ROWS + column*NUM_COLUMNS].type = pGrid[row][column];
+			pGems[row*NUM_ROWS + column*NUM_COLUMNS].x = row * rowHeight;
+			pGems[row*NUM_ROWS + column*NUM_COLUMNS].y = column * columnWidth;
 		}
+	}
+
+	std::cout << "initGrid\n";
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		std::cout << "[";
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			std::cout << pGems[row*NUM_ROWS + column*NUM_COLUMNS].type << ",";
+		}
+		std::cout << "]\n";
 	}
 
 	return pGrid;
 }
 
 
-void checkMatchRow(int** pGrid, int row, int column)
+void checkMatchColumn(int** pGrid, int row, int column)
 {
 	int gemToCompare = pGrid[row][column];
 	// Now check for at least 2 adjacent matching gems below
@@ -189,8 +226,193 @@ void checkMatch(int** pGrid, int numGemTypes)
 }
 */
 
-void checkMatch(int** pGrid, int numGemTypes)
+void checkMatchAllColumns(int** pGrid)
 {
+	// int tempGridRow[NUM_ROWS][NUM_COLUMNS] = 
+	// 					  {{0,0,0,0,0,0,0,0},
+	// 					   {0,0,0,0,0,0,0,0},
+	// 					   {0,0,0,0,0,0,0,0},
+	// 					   {0,0,0,0,0,0,0,0},
+	// 					   {0,0,0,0,0,0,0,0},
+	// 					   {0,0,0,0,0,0,0,0},
+	// 					   {0,0,0,0,0,0,0,0},
+	// 					   {0,0,0,0,0,0,0,0}};
+	// // Copy the grid to a temporary grid to mark column matches
+	// std::copy(&pGrid[0][0], &pGrid[0][0]+NUM_ROWS*NUM_COLUMNS, &tempGridRow[0][0]);
+	
+	for (int row = 0; row < NUM_ROWS-2; row++)
+	{
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			int gemToCompare = pGrid[row][column];
+			// Now check for at least 2 adjacent matching gems below
+			if (row < NUM_ROWS-2 && 
+				pGrid[row+1][column] == gemToCompare && 
+				pGrid[row+2][column] == gemToCompare)
+			{
+				// Continue marking matching gems until reached a different gem
+				bool matchColumn = true;
+				int j = 1;
+				while (matchColumn && row+j < NUM_ROWS)
+				{
+					if (pGrid[row+j][column] == gemToCompare)
+					{
+						pGrid[row+j][column] = -1;
+						j++;
+					}
+					else
+					{
+						matchColumn = false;
+					}
+				}
+				pGrid[row][column] = -1;	// Get rid of origin gem
+			}
+		}
+	}
+}
+
+void checkMatchAllRows(int** pGrid)
+{
+	int tempGridRow[NUM_ROWS][NUM_COLUMNS] = 
+						  {{0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0}};
+	// Copy the grid to a temporary grid to mark column matches
+	// std::copy(&pGrid[0][0], &pGrid[0][0]+NUM_ROWS*NUM_COLUMNS, &tempGridRow[0][0]);
+	
+	// std::copy not working properly so copy this way instead
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			tempGridRow[row][column] = pGrid[row][column];
+		}
+	}
+
+	std::cout << "checkMatchAllRows\n";
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		std::cout << "[";
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			std::cout << tempGridRow[row][column] << ",";
+		}
+		std::cout << "]\n";
+	}
+
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		for (int column = 0; column < NUM_COLUMNS-2; column++)
+		{
+			int gemToCompare = tempGridRow[row][column];
+			// Now check for at least 2 adjacent matching gems to the right
+			if (
+				tempGridRow[row][column+1] == gemToCompare && 
+				tempGridRow[row][column+2] == gemToCompare)
+			{
+				// Continue marking matching gems until reached a different gem
+				bool matchRow = true;
+				int j = 1;
+				while (matchRow && column+j < NUM_COLUMNS)
+				{
+					if (tempGridRow[row][column+j] == gemToCompare)
+					{
+						tempGridRow[row][column+j] = -1;
+						j++;
+					}
+					else
+					{
+						matchRow = false;
+					}
+				}
+				tempGridRow[row][column] = -1;	// Get rid of origin gem
+			}
+		}
+	}
+	std::cout << "tempGridRow\n";
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		std::cout << "[";
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			std::cout << tempGridRow[row][column] << ",";
+		}
+		std::cout << "]\n";
+	}
+
+	checkMatchAllColumns(pGrid);
+
+	std::cout << "After checkMatchAllColumns\n";
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		std::cout << "[";
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			std::cout << pGrid[row][column] << ",";
+		}
+		std::cout << "]\n";
+	}
+
+	// Merge result of deleted colums with result of deleted rows
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			if (tempGridRow[row][column] == -1)
+			{
+				pGrid[row][column] = -1;
+			}
+		}
+	}
+	std::cout << "After merge\n";
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		std::cout << "[";
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			std::cout << pGrid[row][column] << ",";
+		}
+		std::cout << "]\n";
+	}
+}
+
+void checkMatch(int** pGrid)
+{
+	//int** tempGrid = new int*[NUM_ROWS];
+	int tempGridRow[NUM_ROWS][NUM_COLUMNS] = 
+						  {{0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0},
+						   {0,0,0,0,0,0,0,0}};
+	// memcpy(tempGridRow, pGrid, sizeof(int)*NUM_ROWS*NUM_COLUMNS);
+	// Copy the grid to a temporary grid to mark row matches
+	std::copy(&pGrid[0][0], &pGrid[0][0]+NUM_ROWS*NUM_COLUMNS, &tempGridRow[0][0]);
+
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		std::cout << "[";
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			std::cout << tempGridRow[row][column] << ",";
+		}
+		std::cout << "]\n";
+	}
+/*
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		delete [] tempGrid[row];
+	}
+	delete [] tempGrid;
+*/
 	for (int row = 0; row < NUM_ROWS; row++)
 	{
 		int column = 0;
@@ -198,67 +420,111 @@ void checkMatch(int** pGrid, int numGemTypes)
 		//for (int column = 0; column < NUM_COLUMNS-2; column++)
 		{
 			std::cout << "row = " << row << ", column = " << column << "\n";
-			int gemToCompare = pGrid[row][column];
+			int gemToCompare = tempGridRow[row][column];
 			int numMatches = 1;
 
 			if (gemToCompare != -1)
 			{
 				std::cout << "1\n";
-				// Check for at least 2 adjacent matching gems to the right
-				//if (pGrid[row][column+1] == pGrid[row][column] && pGrid[row][column+2] == pGrid[row][column])
+				// Continue marking matching gems until reached a different gem
+				bool match = true;
+				int i = 1;
+				while (match && column+i < NUM_COLUMNS)
 				{
-					// Continue marking matching gems until reached a different gem
-					bool match = true;
-					int i = 1;
-					while (match && column+i < NUM_COLUMNS)
+					std::cout << "1.1: column+i = " << (column+i) << ", tempGridRow["<<row<<"]["<<(column+i)<<"] = "<<tempGridRow[row][column+i]<<
+					", gemToCompare = "<<gemToCompare<<"\n";
+					if (tempGridRow[row][column+i] == gemToCompare)
 					{
-						std::cout << "1.1: column+i = " << (column+i) << ", pGrid["<<row<<"]["<<(column+i)<<"] = "<<pGrid[row][column+i]<<
-						", gemToCompare = "<<gemToCompare<<"\n";
-						if (pGrid[row][column+i] == gemToCompare)
-						{
-							numMatches++;
-							i++;
-							std::cout << "numMatches = " << numMatches << "\n";
-						}
-						else
-						{
-							match = false;
-						}
+						std::cout << "Match\n";
+						numMatches++;
+						i++;
+						std::cout << "numMatches = " << numMatches << "\n";
 					}
-					//pGrid[row][column] = -1;	// Get rid of origin gem
+					else
+					{
+						std::cout << "No match\n";
+						match = false;
+					}
 				}
-				// else
+
+				// Check and get rid of vertical matches connected to this matching row
+				// std::cout << "1.2: numMatches = " << numMatches << "\n";
+				// for (i = 0; i < numMatches; i++)
 				// {
-					checkMatchRow(pGrid, row, column);
+					// checkMatchRow(pGrid, row, column+i);
 				// }
+
 				std::cout << "2: numMatches = " << numMatches << "\n";
+				// Mark all matching gems for removal
 				if (numMatches >= 3)
 				{
-					int j;
-					for (j = 0; j < numMatches; j++)
+					//int j;
+					for (i = 0; i < numMatches; i++)
 					{
-						pGrid[row][column+j] = -1;
+						tempGridRow[row][column+i] = -1;
 					}
-					column = column+j;
+					column = column+i;
 
-				std::cout << "3: column = " << column << "\n";
+					std::cout << "3: column = " << column << "\n";
 				}
 				else
 				{
 					std::cout << "4: column = " << column << "\n";
-					column++;
+					column += numMatches;
 				}
 			}
 			else
 			{
-
+				// No gem here so move to next column
 				std::cout << "4: column = " << column << "\n";
 				column++;
 			}
 		}
 	}
+
+	checkMatchAllColumns(pGrid);
 }
 
+
+void checkDrop(int** pGrid, gem* pGems)
+{
+	// Check if there's an empty space below gem
+	for (int row = 0; row < NUM_ROWS-1; row++)
+	{
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			if (pGrid[row+1][column] == -1)
+			{
+				pGems[row*NUM_ROWS + column*NUM_COLUMNS].state = GEMSTATE_FALL;
+			}
+		}
+	}
+}
+
+void dropGems(int** pGrid, gem* pGems)
+{
+	/*
+	for (int i = 0; i < NUM_ROWS*NUM_COLUMNS; i++)
+	{
+		if (pGems[i].state == GEMSTATE_FALL)
+		{
+			pGems[i].y++;
+		}
+	}
+	*/
+	for (int row = NUM_ROWS-2; row >= 0; row--)
+	{
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			if (pGrid[row+1][column] == -1)
+			{
+				// Move this gem down to next row
+				pGrid[row+1][column] = pGrid[row][column];
+				pGrid[row][column] = -1;
+			}
+		}
+	}
+}
 
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -305,7 +571,8 @@ int main(int argc, char **argv){
 	SDL_Event e;
 	//For tracking if we want to quit
 	bool quit = false;
-	//Render* gameRenderer = new Render();
+	int gameState = GAMESTATE_INIT;
+	// Render* gameRenderer = new Render();
 	/*int gridArray[NUM_ROWS][NUM_COLUMNS] = 
 						  {{0,2,0,0,0,0,0,0},
 						   {1,0,0,0,0,0,0,0},
@@ -316,11 +583,38 @@ int main(int argc, char **argv){
 						   {0,0,0,0,0,0,0,0},
 						   {0,0,0,0,0,0,0,0}};
 	*/
-
-	int** pGridArray = initGrid();
-	checkMatch(pGridArray, sizeof(*gems));
+	int** pGridArray;
+	// int* pGemStateArray = nullptr;
+	gem* pGemsArray = new gem[NUM_ROWS * NUM_COLUMNS];
 
 	while (!quit){
+
+		switch (gameState)
+		{
+			case GAMESTATE_INIT:
+				for (int i = 0; i < NUM_ROWS*NUM_COLUMNS; i++)
+				{
+					// pGemStateArray[i] = GEMSTATE_IDLE;
+					pGemsArray[i].state = GEMSTATE_IDLE;
+				}
+				pGridArray = initGrid(pGemsArray);
+				checkMatchAllRows(pGridArray);
+				gameState = GAMESTATE_AWAIT_INPUT;
+			break;
+
+			case GAMESTATE_AWAIT_INPUT:
+				gameState = GAMESTATE_CHECKDROP;
+			break;
+
+			case GAMESTATE_CHECKDROP:
+				checkDrop(pGridArray, pGemsArray);
+				gameState = GAMESTATE_DROP;
+			break;
+
+			case GAMESTATE_DROP:
+				dropGems(pGridArray, pGemsArray);
+			break;
+		}
 		//Read user input & handle it
 		//Read any events that occured, for now we'll just quit if any event occurs
 		while (SDL_PollEvent(&e)){
@@ -374,6 +668,15 @@ int main(int argc, char **argv){
 				}
 			}
 		}
+		/*
+		for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++)
+		{
+			if (pGemsArray[i].state != GEMSTATE_DEAD)
+			{
+				renderTexture(gems[pGemsArray[i].type], renderer, pGemsArray[i].x, pGemsArray[i].y);
+			}
+		}
+		*/
 
 		// xOffset++;
 		//Draw our image in the center of the window
@@ -395,7 +698,7 @@ int main(int argc, char **argv){
 	//SDL_Delay(2000);
 
 	//Clean up our objects and quit
-	//gameRenderer = NULL;
+	// gameRenderer = NULL;
 	SDL_DestroyTexture(background);
 	SDL_DestroyTexture(image);
 	SDL_DestroyTexture(blueGem);
@@ -416,6 +719,8 @@ int main(int argc, char **argv){
 		delete [] pGridArray[row];
 	}
 	delete [] pGridArray;
+
+	delete [] pGemsArray;
 
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
