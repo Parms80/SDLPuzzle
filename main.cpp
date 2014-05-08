@@ -7,6 +7,8 @@ const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
 const int NUM_ROWS = 8;
 const int NUM_COLUMNS = 8;
+const int ROW_HEIGHT = SCREEN_HEIGHT / NUM_ROWS;
+const int MAX_DROP_SPEED = 10;
 
 const int GAMESTATE_INIT = 0;
 const int GAMESTATE_CHECKDROP = 1;
@@ -16,6 +18,7 @@ const int GAMESTATE_AWAIT_INPUT = 3;
 const int GEMSTATE_IDLE = 0;
 const int GEMSTATE_FALL = 1;
 const int GEMSTATE_DEAD = 2;
+const int GEMSTATE_BOUNCE = 3;
 
 // int xOffset = 0;
 // int yOffset = 50;
@@ -107,6 +110,7 @@ int** initGrid(gem* pGems)
 						   {0,0,0,0,0,2,2,2}};
 
 	int** pGrid = new int*[NUM_ROWS];
+	int gridCount = 0;
 
 	for (int row = 0; row < NUM_ROWS; row++)
 	{
@@ -114,21 +118,38 @@ int** initGrid(gem* pGems)
 
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			pGrid[row][column] = rand() % 5;
+			// pGrid[row][column] = rand() % 5;
 			// pGrid[row][column] = testGridArray[row][column];
-			pGems[row*NUM_ROWS + column*NUM_COLUMNS].type = pGrid[row][column];
-			pGems[row*NUM_ROWS + column*NUM_COLUMNS].x = row * rowHeight;
-			pGems[row*NUM_ROWS + column*NUM_COLUMNS].y = column * columnWidth;
+			pGrid[row][column] = gridCount;
+			pGems[pGrid[row][column]].type = rand() % 5;//testGridArray[row][column];
+			pGems[pGrid[row][column]].y = 0;//row * rowHeight;
+			pGems[pGrid[row][column]].x = column * columnWidth;
+			pGems[pGrid[row][column]].row = row;
+			pGems[pGrid[row][column]].column = column;
+			pGems[pGrid[row][column]].velocity = 1;
+
+			gridCount++;
 		}
 	}
 
-	std::cout << "initGrid\n";
+	std::cout << "initGrid pGems\n";
 	for (int row = 0; row < NUM_ROWS; row++)
 	{
 		std::cout << "[";
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			std::cout << pGems[row*NUM_ROWS + column*NUM_COLUMNS].type << ",";
+			std::cout << pGems[pGrid[row][column]].type << ",";
+		}
+		std::cout << "]\n";
+	}
+
+	std::cout << "initGrid pGrid\n";
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		std::cout << "[";
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			std::cout << pGrid[row][column] << ",";
 		}
 		std::cout << "]\n";
 	}
@@ -137,22 +158,22 @@ int** initGrid(gem* pGems)
 }
 
 
-void checkMatchColumn(int** pGrid, int row, int column)
+void checkMatchColumn(int** pGrid, gem* pGems, int row, int column)
 {
-	int gemToCompare = pGrid[row][column];
+	int gemToCompare = pGems[pGrid[row][column]].type;
 	// Now check for at least 2 adjacent matching gems below
 	if (row < NUM_ROWS-2 && 
-		pGrid[row+1][column] == gemToCompare && 
-		pGrid[row+2][column] == gemToCompare)
+		pGems[pGrid[row+1][column]].type == gemToCompare && 
+		pGems[pGrid[row+2][column]].type == gemToCompare)
 	{
 		// Continue marking matching gems until reached a different gem
 		bool matchRow = true;
 		int j = 1;
 		while (matchRow && row+j < NUM_ROWS)
 		{
-			if (pGrid[row+j][column] == gemToCompare)
+			if (pGems[pGrid[row+j][column]].type == gemToCompare)
 			{
-				pGrid[row+j][column] = -1;
+				pGems[pGrid[row+j][column]].type = -1;
 				j++;
 			}
 			else
@@ -160,7 +181,7 @@ void checkMatchColumn(int** pGrid, int row, int column)
 				matchRow = false;
 			}
 		}
-		pGrid[row][column] = -1;	// Get rid of origin gem
+		pGems[pGrid[row][column]].type = -1;	// Get rid of origin gem
 	}
 }
 /*
@@ -226,7 +247,7 @@ void checkMatch(int** pGrid, int numGemTypes)
 }
 */
 
-void checkMatchAllColumns(int** pGrid)
+void checkMatchAllColumns(int** pGrid, gem* pGems)
 {
 	// int tempGridRow[NUM_ROWS][NUM_COLUMNS] = 
 	// 					  {{0,0,0,0,0,0,0,0},
@@ -244,20 +265,20 @@ void checkMatchAllColumns(int** pGrid)
 	{
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			int gemToCompare = pGrid[row][column];
+			int gemToCompare = pGems[pGrid[row][column]].type;
 			// Now check for at least 2 adjacent matching gems below
 			if (row < NUM_ROWS-2 && 
-				pGrid[row+1][column] == gemToCompare && 
-				pGrid[row+2][column] == gemToCompare)
+				pGems[pGrid[row+1][column]].type == gemToCompare && 
+				pGems[pGrid[row+2][column]].type == gemToCompare)
 			{
 				// Continue marking matching gems until reached a different gem
 				bool matchColumn = true;
 				int j = 1;
 				while (matchColumn && row+j < NUM_ROWS)
 				{
-					if (pGrid[row+j][column] == gemToCompare)
+					if (pGems[pGrid[row+j][column]].type == gemToCompare)
 					{
-						pGrid[row+j][column] = -1;
+						pGems[pGrid[row+j][column]].type = -1;
 						j++;
 					}
 					else
@@ -265,13 +286,13 @@ void checkMatchAllColumns(int** pGrid)
 						matchColumn = false;
 					}
 				}
-				pGrid[row][column] = -1;	// Get rid of origin gem
+				pGems[pGrid[row][column]].type = -1;	// Get rid of origin gem
 			}
 		}
 	}
 }
 
-void checkMatchAllRows(int** pGrid)
+void checkMatchAllRows(int** pGrid, gem* pGems)
 {
 	int tempGridRow[NUM_ROWS][NUM_COLUMNS] = 
 						  {{0,0,0,0,0,0,0,0},
@@ -300,7 +321,7 @@ void checkMatchAllRows(int** pGrid)
 		std::cout << "[";
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			std::cout << tempGridRow[row][column] << ",";
+			std::cout << pGems[tempGridRow[row][column]].type << ",";
 		}
 		std::cout << "]\n";
 	}
@@ -309,11 +330,11 @@ void checkMatchAllRows(int** pGrid)
 	{
 		for (int column = 0; column < NUM_COLUMNS-2; column++)
 		{
-			int gemToCompare = tempGridRow[row][column];
+			int gemToCompare = pGems[tempGridRow[row][column]].type;
 			// Now check for at least 2 adjacent matching gems to the right
 			if (
-				tempGridRow[row][column+1] == gemToCompare && 
-				tempGridRow[row][column+2] == gemToCompare)
+				pGems[tempGridRow[row][column+1]].type == gemToCompare && 
+				pGems[tempGridRow[row][column+2]].type == gemToCompare)
 			{
 				// Continue marking matching gems until reached a different gem
 				bool matchRow = true;
@@ -345,7 +366,7 @@ void checkMatchAllRows(int** pGrid)
 		std::cout << "]\n";
 	}
 
-	checkMatchAllColumns(pGrid);
+	checkMatchAllColumns(pGrid, pGems);
 
 	std::cout << "After checkMatchAllColumns\n";
 	for (int row = 0; row < NUM_ROWS; row++)
@@ -353,7 +374,7 @@ void checkMatchAllRows(int** pGrid)
 		std::cout << "[";
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			std::cout << pGrid[row][column] << ",";
+			std::cout << pGems[pGrid[row][column]].type << ",";
 		}
 		std::cout << "]\n";
 	}
@@ -365,7 +386,7 @@ void checkMatchAllRows(int** pGrid)
 		{
 			if (tempGridRow[row][column] == -1)
 			{
-				pGrid[row][column] = -1;
+				pGems[pGrid[row][column]].type = -1;
 			}
 		}
 	}
@@ -375,12 +396,13 @@ void checkMatchAllRows(int** pGrid)
 		std::cout << "[";
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			std::cout << pGrid[row][column] << ",";
+			std::cout << pGems[pGrid[row][column]].type << ",";
 		}
 		std::cout << "]\n";
 	}
 }
 
+/*
 void checkMatch(int** pGrid)
 {
 	//int** tempGrid = new int*[NUM_ROWS];
@@ -406,13 +428,13 @@ void checkMatch(int** pGrid)
 		}
 		std::cout << "]\n";
 	}
-/*
-	for (int row = 0; row < NUM_ROWS; row++)
-	{
-		delete [] tempGrid[row];
-	}
-	delete [] tempGrid;
-*/
+
+	// for (int row = 0; row < NUM_ROWS; row++)
+	// {
+	// 	delete [] tempGrid[row];
+	// }
+	// delete [] tempGrid;
+
 	for (int row = 0; row < NUM_ROWS; row++)
 	{
 		int column = 0;
@@ -484,7 +506,7 @@ void checkMatch(int** pGrid)
 
 	checkMatchAllColumns(pGrid);
 }
-
+*/
 
 void checkDrop(int** pGrid, gem* pGems)
 {
@@ -493,37 +515,70 @@ void checkDrop(int** pGrid, gem* pGems)
 	{
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			if (pGrid[row+1][column] == -1)
+			if (pGems[pGrid[row+1][column]].type == -1 && pGems[pGrid[row][column]].state == GEMSTATE_IDLE)
 			{
-				pGems[row*NUM_ROWS + column*NUM_COLUMNS].state = GEMSTATE_FALL;
+				//pGems[row*NUM_ROWS + column*NUM_COLUMNS].state = GEMSTATE_FALL;
+				pGems[pGrid[row][column]].state = GEMSTATE_FALL;
 			}
 		}
 	}
 }
 
-void dropGems(int** pGrid, gem* pGems)
+void dropGem(int** pGrid, gem* pThisGem, gem* pGems)
 {
-	/*
-	for (int i = 0; i < NUM_ROWS*NUM_COLUMNS; i++)
+	// std::cout << "dropGem: pThisGem.state = " << pThisGem->state << "\n";
+	pThisGem->y += pThisGem->velocity;		
+	pThisGem->velocity++;		
+
+	// std::cout << "dropGem: pThisGem.y = " << pThisGem->y << ", velocity = " << pThisGem->velocity << ", ROW_HEIGHT = " << ROW_HEIGHT <<"\n";
+
+	if (pThisGem->velocity > MAX_DROP_SPEED)
 	{
-		if (pGems[i].state == GEMSTATE_FALL)
+		pThisGem->velocity = MAX_DROP_SPEED;
+	}
+
+	if (pThisGem->y >= ROW_HEIGHT && pThisGem->row < NUM_ROWS-1)
+	{
+		pThisGem->y = 0;
+		// Move this gem down to next row
+		int temp = pGrid[pThisGem->row+1][pThisGem->column];
+		pGrid[pThisGem->row+1][pThisGem->column] = pGrid[pThisGem->row][pThisGem->column];
+		// pGrid[row][column] = -1;
+		pGrid[pThisGem->row][pThisGem->column] = temp;
+
+		// pGems[pGrid[pThisGem->row+1][pThisGem->column]].row = pThisGem->row;
+		pThisGem->row++;
+
+		// Make gem stop falling if there is a gem below or it has reached bottom of grid
+		if (pThisGem->row == NUM_ROWS-1 || pGems[pGrid[ pThisGem->row+1][pThisGem->column]].type != -1)
 		{
-			pGems[i].y++;
+			/*
+			std::cout <<  "dropGem: stopping gem. row = "<< pThisGem->row << ". column = " << pThisGem->column <<
+			". This gem type = " << pGems[pGrid[ pThisGem->row][pThisGem->column]].type << 
+			". pGrid[pThisGem] = " << pGrid[ pThisGem->row][pThisGem->column] << 
+			". Gem type below = " << pGems[pGrid[ pThisGem->row+1][pThisGem->column]].type << "\n";
+			*/			
+			pThisGem->state = GEMSTATE_BOUNCE;
+			pThisGem->velocity = pThisGem->velocity/2;
 		}
 	}
-	*/
+		
+	/*
 	for (int row = NUM_ROWS-2; row >= 0; row--)
 	{
 		for (int column = 0; column < NUM_COLUMNS; column++)
 		{
-			if (pGrid[row+1][column] == -1)
+			if (pGems[pGrid[row+1][column]].type == -1)
 			{
 				// Move this gem down to next row
+				int temp = pGrid[row+1][column];
 				pGrid[row+1][column] = pGrid[row][column];
-				pGrid[row][column] = -1;
+				// pGrid[row][column] = -1;
+				pGrid[row][column] = temp;
 			}
 		}
 	}
+	*/
 }
 
 int main(int argc, char **argv){
@@ -598,23 +653,63 @@ int main(int argc, char **argv){
 					pGemsArray[i].state = GEMSTATE_IDLE;
 				}
 				pGridArray = initGrid(pGemsArray);
-				checkMatchAllRows(pGridArray);
+				checkMatchAllRows(pGridArray, pGemsArray);
 				gameState = GAMESTATE_AWAIT_INPUT;
+				checkDrop(pGridArray, pGemsArray);
 			break;
 
 			case GAMESTATE_AWAIT_INPUT:
-				gameState = GAMESTATE_CHECKDROP;
+
+
+				for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++)
+				{
+					switch (pGemsArray[i].state)
+					{
+						case GEMSTATE_IDLE:
+						break;
+
+						case GEMSTATE_FALL:
+							if (pGemsArray[i].type != -1)
+							{
+								dropGem(pGridArray, &pGemsArray[i], pGemsArray);
+							}
+						break;
+
+						case GEMSTATE_BOUNCE:
+
+							std::cout << "i = " << i << ", y = " << pGemsArray[i].y << ", velocity = " << pGemsArray[i].velocity << "\n";
+						// if (pGemsArray[i].y >= 0)
+						{
+							// std::cout << "dropGem: pGemsArray["<<i<<"].y = " << pGemsArray[i].y << "\n";
+							pGemsArray[i].y += pGemsArray[i].velocity;
+							//if (pGemsArray[i].velocity > 0 && pGemsArray[i].y > 4)
+							{
+								pGemsArray[i].velocity--;		
+							}
+
+							if (pGemsArray[i].y < 0)
+							{
+								pGemsArray[i].y = 0;
+								pGemsArray[i].velocity = 0;
+								pGemsArray[i].state = GEMSTATE_IDLE;
+							}
+						}
+						break;
+					}
+				}
+				// gameState = GAMESTATE_CHECKDROP;
 			break;
 
-			case GAMESTATE_CHECKDROP:
-				checkDrop(pGridArray, pGemsArray);
-				gameState = GAMESTATE_DROP;
-			break;
+			// case GAMESTATE_CHECKDROP:
+			// 	checkDrop(pGridArray, pGemsArray);
+			// 	gameState = GAMESTATE_DROP;
+			// break;
 
-			case GAMESTATE_DROP:
-				dropGems(pGridArray, pGemsArray);
-			break;
+			// case GAMESTATE_DROP:
+			// 	dropGems(pGridArray, pGemsArray);
+			// break;
 		}
+
 		//Read user input & handle it
 		//Read any events that occured, for now we'll just quit if any event occurs
 		while (SDL_PollEvent(&e)){
@@ -648,27 +743,39 @@ int main(int argc, char **argv){
 			int y = i / bW;
 			renderTexture(background, renderer, x * bW, y * bH);
 		}
-
+/*
+	std::cout << "Before rendering\n";
+	for (int row = 0; row < NUM_ROWS; row++)
+	{
+		std::cout << "[";
+		for (int column = 0; column < NUM_COLUMNS; column++)
+		{
+			std::cout << pGemsArray[pGridArray[row][column]].type << ",";
+		}
+		std::cout << "]\n";
+	}
+*/
 		// Draw the gems
 		int columnWidth = SCREEN_WIDTH / NUM_COLUMNS;
-		int rowHeight = SCREEN_HEIGHT / NUM_ROWS;
+		// int rowHeight = SCREEN_HEIGHT / NUM_ROWS;
 		int gemWidth, gemHeight;
 		int x, y;
 		SDL_QueryTexture(gems[0], NULL, NULL, &gemWidth, &gemHeight);
+		/*
 		for (int row = 0; row < NUM_ROWS; row++)
 		{
-			y = rowHeight * row + rowHeight/2 - gemHeight/2;
+			y = ROW_HEIGHT * row + ROW_HEIGHT/2 - gemHeight/2;
 
 			for (int column = 0; column < NUM_COLUMNS; column++)
 			{
-				if (pGridArray[row][column] != -1)
+				if (pGemsArray[pGridArray[row][column]].type != -1)
 				{
 					x = columnWidth * column + columnWidth/2 - gemWidth/2;
-					renderTexture(gems[pGridArray[row][column]], renderer, x, y);
+					// y = pGemsArray[pGridArray[row][column]].y;
+					renderTexture(gems[pGemsArray[pGridArray[row][column]].type], renderer, x, y + pGemsArray[pGridArray[row][column]].y);
 				}
 			}
 		}
-		/*
 		for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++)
 		{
 			if (pGemsArray[i].state != GEMSTATE_DEAD)
@@ -677,6 +784,16 @@ int main(int argc, char **argv){
 			}
 		}
 		*/
+
+		for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++)
+		{
+			if (pGemsArray[i].type != -1)
+			{
+				x = columnWidth * pGemsArray[i].column + columnWidth/2 - gemWidth/2;
+				y = ROW_HEIGHT * pGemsArray[i].row + ROW_HEIGHT/2 - gemHeight/2;
+				renderTexture(gems[pGemsArray[i].type], renderer, x, y + pGemsArray[i].y);
+			}
+		}
 
 		// xOffset++;
 		//Draw our image in the center of the window
