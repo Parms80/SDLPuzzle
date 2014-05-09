@@ -510,19 +510,32 @@ void checkMatch(int** pGrid)
 
 void checkDrop(int** pGrid, gem* pGems)
 {
-	// Check if there's an empty space below gem
-	for (int row = 0; row < NUM_ROWS-1; row++)
+	// Check if there is an empty space in each column
+	for (int column = 0; column < NUM_COLUMNS; column++)
 	{
-		for (int column = 0; column < NUM_COLUMNS; column++)
+		int row = NUM_ROWS-1;
+		bool foundEmpty = false;
+		while (!foundEmpty && row >= 0)
 		{
-			if (pGems[pGrid[row+1][column]].type == -1 && pGems[pGrid[row][column]].state == GEMSTATE_IDLE)
+			if (pGems[pGrid[row][column]].type == -1 && pGems[pGrid[row][column]].state == GEMSTATE_IDLE)
 			{
-				//pGems[row*NUM_ROWS + column*NUM_COLUMNS].state = GEMSTATE_FALL;
-				pGems[pGrid[row][column]].state = GEMSTATE_FALL;
+				std::cout << "checkDrop: found empty at [" << row << "][" << column << "]\n";
+				foundEmpty = true;
+				// Found a blank space so mark all gems above to drop
+				for (int i = row; i >= 0; i--)
+				{
+					if (pGems[pGrid[i][column]].type != -1)
+					{
+						std::cout << "checkDrop: mark [" << i << "][" << column << "] to fall\n";
+						pGems[pGrid[i][column]].state = GEMSTATE_FALL;
+					}
+				}
 			}
+			row--;
 		}
 	}
 }
+
 
 void dropGem(int** pGrid, gem* pThisGem, gem* pGems)
 {
@@ -550,7 +563,8 @@ void dropGem(int** pGrid, gem* pThisGem, gem* pGems)
 		pThisGem->row++;
 
 		// Make gem stop falling if there is a gem below or it has reached bottom of grid
-		if (pThisGem->row == NUM_ROWS-1 || pGems[pGrid[ pThisGem->row+1][pThisGem->column]].type != -1)
+		if (pThisGem->row == NUM_ROWS-1 || 
+			(pGems[pGrid[ pThisGem->row+1][pThisGem->column]].type != -1 && pGems[pGrid[ pThisGem->row+1][pThisGem->column]].state != GEMSTATE_FALL))
 		{
 			/*
 			std::cout <<  "dropGem: stopping gem. row = "<< pThisGem->row << ". column = " << pThisGem->column <<
@@ -580,6 +594,7 @@ void dropGem(int** pGrid, gem* pThisGem, gem* pGems)
 	}
 	*/
 }
+
 
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -661,40 +676,36 @@ int main(int argc, char **argv){
 			case GAMESTATE_AWAIT_INPUT:
 
 
-				for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++)
+				for (int row = NUM_ROWS-1; row >= 0; row--)
 				{
-					switch (pGemsArray[i].state)
+					for (int column = 0; column < NUM_COLUMNS; column++)
 					{
-						case GEMSTATE_IDLE:
-						break;
-
-						case GEMSTATE_FALL:
-							if (pGemsArray[i].type != -1)
-							{
-								dropGem(pGridArray, &pGemsArray[i], pGemsArray);
-							}
-						break;
-
-						case GEMSTATE_BOUNCE:
-
-							std::cout << "i = " << i << ", y = " << pGemsArray[i].y << ", velocity = " << pGemsArray[i].velocity << "\n";
-						// if (pGemsArray[i].y >= 0)
+						switch (pGemsArray[pGridArray[row][column]].state)
 						{
-							// std::cout << "dropGem: pGemsArray["<<i<<"].y = " << pGemsArray[i].y << "\n";
-							pGemsArray[i].y += pGemsArray[i].velocity;
-							//if (pGemsArray[i].velocity > 0 && pGemsArray[i].y > 4)
-							{
-								pGemsArray[i].velocity--;		
-							}
+							case GEMSTATE_IDLE:
+							break;
 
-							if (pGemsArray[i].y < 0)
-							{
-								pGemsArray[i].y = 0;
-								pGemsArray[i].velocity = 0;
-								pGemsArray[i].state = GEMSTATE_IDLE;
-							}
-						}
-						break;
+							case GEMSTATE_FALL:
+								
+								if (pGemsArray[pGridArray[row][column]].type != -1)
+								{
+									dropGem(pGridArray, &pGemsArray[pGridArray[row][column]], pGemsArray);
+								}
+							break;
+
+							case GEMSTATE_BOUNCE:
+
+								pGemsArray[pGridArray[row][column]].y += pGemsArray[pGridArray[row][column]].velocity;
+								pGemsArray[pGridArray[row][column]].velocity--;		
+
+								if (pGemsArray[pGridArray[row][column]].y < 0)
+								{
+									pGemsArray[pGridArray[row][column]].y = 0;
+									pGemsArray[pGridArray[row][column]].velocity = 0;
+									pGemsArray[pGridArray[row][column]].state = GEMSTATE_IDLE;
+								}
+							break;
+						}	
 					}
 				}
 				// gameState = GAMESTATE_CHECKDROP;
