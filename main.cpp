@@ -8,20 +8,30 @@ const int SCREEN_HEIGHT = 480;
 const int NUM_ROWS = 8;
 const int NUM_COLUMNS = 8;
 const int ROW_HEIGHT = SCREEN_HEIGHT / NUM_ROWS;
+const int COLUMN_WIDTH = SCREEN_WIDTH / NUM_COLUMNS;
 const int MAX_DROP_SPEED = 10;
+const int SWAP_SPEED = 10;
 
 const int GAMESTATE_INIT = 0;
 const int GAMESTATE_CHECKDROP = 1;
 const int GAMESTATE_DROP = 2;
 const int GAMESTATE_AWAIT_INPUT = 3;
+const int GAMESTATE_SWAP_LEFT = 4;
+const int GAMESTATE_SWAP_RIGHT = 5;
+const int GAMESTATE_SWAP_UP = 6;
+const int GAMESTATE_SWAP_DOWN = 7;
 
 const int GEMSTATE_IDLE = 0;
 const int GEMSTATE_FALL = 1;
 const int GEMSTATE_DEAD = 2;
 const int GEMSTATE_BOUNCE = 3;
+const int GEMSTATE_MOVE_LEFT = 4;
+const int GEMSTATE_MOVE_RIGHT = 5;
+const int GEMSTATE_MOVE_UP = 6;
+const int GEMSTATE_MOVE_DOWN = 7;
 
-// int xOffset = 0;
-// int yOffset = 50;
+const int ROW = 0;
+const int COLUMN = 1;
 
 
 struct gem
@@ -97,7 +107,6 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
 
 int** initGrid(gem* pGems)
 {
-	int columnWidth = SCREEN_WIDTH / NUM_COLUMNS;
 	int rowHeight = SCREEN_HEIGHT / NUM_ROWS;
 	int testGridArray[NUM_ROWS][NUM_COLUMNS] = 
 						  {{1,2,0,0,0,0,0,0},
@@ -123,7 +132,7 @@ int** initGrid(gem* pGems)
 			pGrid[row][column] = gridCount;
 			pGems[pGrid[row][column]].type = rand() % 5;//testGridArray[row][column];
 			pGems[pGrid[row][column]].y = 0;//row * rowHeight;
-			pGems[pGrid[row][column]].x = column * columnWidth;
+			pGems[pGrid[row][column]].x = 0;
 			pGems[pGrid[row][column]].row = row;
 			pGems[pGrid[row][column]].column = column;
 			pGems[pGrid[row][column]].velocity = 1;
@@ -332,8 +341,7 @@ void checkMatchAllRows(int** pGrid, gem* pGems)
 		{
 			int gemToCompare = pGems[tempGridRow[row][column]].type;
 			// Now check for at least 2 adjacent matching gems to the right
-			if (
-				pGems[tempGridRow[row][column+1]].type == gemToCompare && 
+			if (pGems[tempGridRow[row][column+1]].type == gemToCompare && 
 				pGems[tempGridRow[row][column+2]].type == gemToCompare)
 			{
 				// Continue marking matching gems until reached a different gem
@@ -577,23 +585,60 @@ void dropGem(int** pGrid, gem* pThisGem, gem* pGems)
 		}
 	}
 		
-	/*
-	for (int row = NUM_ROWS-2; row >= 0; row--)
-	{
-		for (int column = 0; column < NUM_COLUMNS; column++)
-		{
-			if (pGems[pGrid[row+1][column]].type == -1)
-			{
-				// Move this gem down to next row
-				int temp = pGrid[row+1][column];
-				pGrid[row+1][column] = pGrid[row][column];
-				// pGrid[row][column] = -1;
-				pGrid[row][column] = temp;
-			}
-		}
-	}
-	*/
 }
+
+
+// void swapGem(int** pGrid, gem* pThisGem, gem* pGems)
+// {
+// 	pGemsArray[pGridArray[row][column]].x += pGemsArray[pGridArray[row][column]].velocity;
+// }
+
+int checkSwapGems(int* gemPosArray)
+{
+	// Check if the second gem is one space from first
+	// int horizontalDist = gemPosArray[0][COLUMN] - gemPosArray[1][COLUMN];
+	// int verticalDist = gemPosArray[0][ROW] - gemPosArray[1][ROW];
+	int horizontalDist = (*(gemPosArray+3)) - (*(gemPosArray+1));
+	int verticalDist = (*(gemPosArray+2)) - (*gemPosArray);
+	
+	std::cout << "checkSwapGems: horizontalDist = " << horizontalDist << " \n";
+	std::cout << "checkSwapGems: verticalDist = " << verticalDist << " \n";
+
+	if (horizontalDist == 1 && verticalDist == 0)
+	{
+		std::cout << "checkSwapGems: adjacent. Swap right \n";
+		return GAMESTATE_SWAP_RIGHT;
+	}
+	else if	(horizontalDist == -1 && verticalDist == 0)
+	{
+		std::cout << "checkSwapGems: adjacent. Swap left \n";
+		return GAMESTATE_SWAP_LEFT;
+	}
+	else if (horizontalDist == 0 && verticalDist == 1)
+	{
+		std::cout << "checkSwapGems: adjacent. Swap down \n";
+		return GAMESTATE_SWAP_DOWN;
+	}
+	else if (horizontalDist == 0 && verticalDist == -1)
+	{
+		std::cout << "checkSwapGems: adjacent. Swap up \n";
+		return GAMESTATE_SWAP_UP;
+	}
+	else
+	{
+		return -1;
+	}
+
+}
+
+// void checkMatchAfterSwap(int** pGrid, gem* pGems, gem pThisGem, int* gemPosArray, int gameState)
+// {
+// 	if (gameState == GAMESTATE_SWAP_LEFT || gameState == GAMESTATE_SWAP_RIGHT)
+// 	{
+// 		// Check for at least 3 matching gems to the left of the left gem
+// 		int numMatches
+// 	}
+// }
 
 
 int main(int argc, char **argv){
@@ -628,6 +673,8 @@ int main(int argc, char **argv){
 	SDL_Texture *redGem = loadTexture("res/Red.png", renderer);
 	SDL_Texture *yellowGem = loadTexture("res/Yellow.png", renderer);
 	SDL_Texture *gems[] = {blueGem, greenGem, purpleGem, redGem, yellowGem};
+	SDL_Texture *cursorYellowImg = loadTexture("res/cursor_yellow.png", renderer);
+	SDL_Texture *cursorGreenImg = loadTexture("res/cursor_green.png", renderer);
 	//Make sure they both loaded ok
 	if (background == nullptr || image == nullptr){
 		// cleanup(background, image, renderer, window);
@@ -657,6 +704,14 @@ int main(int argc, char **argv){
 	// int* pGemStateArray = nullptr;
 	gem* pGemsArray = new gem[NUM_ROWS * NUM_COLUMNS];
 
+	int mouseX = 0;
+	int mouseY = 0;
+	int numGemsSelected = 0;
+	int selectedGems[2][2] = {{-1, -1}, {-1, -1}};
+	bool gemSelected = false;
+	int cursorRow = 0;
+	int cursorColumn = 0;
+
 	while (!quit){
 
 		switch (gameState)
@@ -675,39 +730,109 @@ int main(int argc, char **argv){
 
 			case GAMESTATE_AWAIT_INPUT:
 
-
-				for (int row = NUM_ROWS-1; row >= 0; row--)
+				if (gemSelected)
 				{
-					for (int column = 0; column < NUM_COLUMNS; column++)
+					if (numGemsSelected < 2)
 					{
-						switch (pGemsArray[pGridArray[row][column]].state)
+						numGemsSelected++;
+					}
+					else
+					{
+						numGemsSelected = 0;
+					}
+					cursorRow = mouseY / ROW_HEIGHT;
+					cursorColumn = mouseX / COLUMN_WIDTH;
+
+					// Store the location of the selected gem
+					selectedGems[numGemsSelected-1][ROW] = cursorRow;
+					selectedGems[numGemsSelected-1][COLUMN] = cursorColumn; 
+
+					gemSelected = false;
+
+					// Check if ready to swap
+					if (numGemsSelected == 2)
+					{
+						int row;
+						int column;
+
+						switch (checkSwapGems((int*)selectedGems))
 						{
-							case GEMSTATE_IDLE:
+							case GAMESTATE_SWAP_LEFT:
+
+								// Move right gem left
+								row = selectedGems[0][ROW];
+								column = selectedGems[0][COLUMN];
+								pGemsArray[pGridArray[row][column]].velocity = -SWAP_SPEED;
+								pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_LEFT;
+
+								// Move left gem right
+								row = selectedGems[1][ROW];
+								column = selectedGems[1][COLUMN];
+								pGemsArray[pGridArray[row][column]].velocity = SWAP_SPEED;
+								pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_RIGHT;
 							break;
 
-							case GEMSTATE_FALL:
-								
-								if (pGemsArray[pGridArray[row][column]].type != -1)
-								{
-									dropGem(pGridArray, &pGemsArray[pGridArray[row][column]], pGemsArray);
-								}
+							case GAMESTATE_SWAP_RIGHT:
+								// Move left gem right
+								row = selectedGems[0][ROW];
+								column = selectedGems[0][COLUMN];
+								pGemsArray[pGridArray[row][column]].velocity = SWAP_SPEED;
+								pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_RIGHT;
+
+								// Move right gem left
+								row = selectedGems[1][ROW];
+								column = selectedGems[1][COLUMN];
+								pGemsArray[pGridArray[row][column]].velocity = -SWAP_SPEED;
+								pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_LEFT;
+
 							break;
 
-							case GEMSTATE_BOUNCE:
+							case GAMESTATE_SWAP_UP:
+								// Move bottom gem up
+								row = selectedGems[0][ROW];
+								column = selectedGems[0][COLUMN];
+								pGemsArray[pGridArray[row][column]].velocity = -SWAP_SPEED;
+								pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_UP;
 
-								pGemsArray[pGridArray[row][column]].y += pGemsArray[pGridArray[row][column]].velocity;
-								pGemsArray[pGridArray[row][column]].velocity--;		
-
-								if (pGemsArray[pGridArray[row][column]].y < 0)
-								{
-									pGemsArray[pGridArray[row][column]].y = 0;
-									pGemsArray[pGridArray[row][column]].velocity = 0;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_IDLE;
-								}
+								// Move right gem left
+								row = selectedGems[1][ROW];
+								column = selectedGems[1][COLUMN];
+								pGemsArray[pGridArray[row][column]].velocity = SWAP_SPEED;
+								pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_DOWN;
 							break;
-						}	
+
+							case GAMESTATE_SWAP_DOWN:
+								// Move top gem down
+								row = selectedGems[0][ROW];
+								column = selectedGems[0][COLUMN];
+								pGemsArray[pGridArray[row][column]].velocity = SWAP_SPEED;
+								pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_DOWN;
+
+								// Move bottom gem up
+								row = selectedGems[1][ROW];
+								column = selectedGems[1][COLUMN];
+								pGemsArray[pGridArray[row][column]].velocity = -SWAP_SPEED;
+								pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_UP;
+							break;
+
+							default:
+
+								// Remove all cursors
+								numGemsSelected = 0;
+
+								// Set new cursor to this position
+								cursorRow = mouseY / ROW_HEIGHT;
+								cursorColumn = mouseX / COLUMN_WIDTH;
+
+								// Store the location of the selected gem
+								selectedGems[numGemsSelected-1][ROW] = cursorRow;
+								selectedGems[numGemsSelected-1][COLUMN] = cursorColumn; 
+								gemSelected = true;
+							break;
+						}
 					}
 				}
+				
 				// gameState = GAMESTATE_CHECKDROP;
 			break;
 
@@ -719,6 +844,114 @@ int main(int argc, char **argv){
 			// case GAMESTATE_DROP:
 			// 	dropGems(pGridArray, pGemsArray);
 			// break;
+		}
+
+		for (int row = NUM_ROWS-1; row >= 0; row--)
+		{
+			for (int column = 0; column < NUM_COLUMNS; column++)
+			{
+				gem* thisGem = &pGemsArray[pGridArray[row][column]];
+
+				switch (pGemsArray[pGridArray[row][column]].state)
+				{
+					case GEMSTATE_IDLE:
+					break;
+
+					case GEMSTATE_FALL:
+						
+						if (pGemsArray[pGridArray[row][column]].type != -1)
+						{
+							dropGem(pGridArray, &pGemsArray[pGridArray[row][column]], pGemsArray);
+						}
+					break;
+
+					case GEMSTATE_BOUNCE:
+
+						thisGem->y += thisGem->velocity;
+						thisGem->velocity--;		
+
+						if (thisGem->y < 0)
+						{
+							thisGem->y = 0;
+							thisGem->velocity = 0;
+							thisGem->state = GEMSTATE_IDLE;
+						}
+					break;
+
+					case GEMSTATE_MOVE_LEFT:
+
+						thisGem->x += thisGem->velocity;
+						// std::cout << "In GEMSTATE_MOVE_LEFT: x = " << pGemsArray[pGridArray[row][column]].x << ", velocity = " << thisGem->velocity << " \n";
+						// swapGem(pGridArray, pGemsArray[pGridArray[row][column]], pGemsArray);
+						// std::cout << "GEMSTATE_MOVE_LEFT: -COLUMN_WIDTH = " << (-COLUMN_WIDTH) << "\n";
+						if (thisGem->x <= -COLUMN_WIDTH)
+						{
+							std::cout << "GEMSTATE_MOVE_LEFT: state set to GEMSTATE_IDLE\n";
+							// Swap with other gem
+							int temp = pGridArray[row][column];
+							pGridArray[row][column] = pGridArray[row][column-1];
+							pGridArray[row][column-1] = temp;
+
+							thisGem->state = GEMSTATE_IDLE;
+							thisGem->velocity = 0;
+							thisGem->x = 0;
+							thisGem->column--;
+
+							// checkMatchAllRows(pGridArray, pGemsArray);
+							// gameState = GAMESTATE_AWAIT_INPUT;
+							// checkDrop(pGridArray, pGemsArray);
+						}						
+					break;
+
+					case GEMSTATE_MOVE_RIGHT:
+
+						thisGem->x += thisGem->velocity;
+						
+						if (thisGem->x >= COLUMN_WIDTH)
+						{
+							thisGem->state = GEMSTATE_IDLE;
+							thisGem->velocity = 0;
+							thisGem->x = 0;
+							thisGem->column++;
+						}						
+					break;
+
+					case GEMSTATE_MOVE_UP:
+
+						thisGem->y += thisGem->velocity;
+						
+						if (thisGem->y <= -ROW_HEIGHT)
+						{
+							// Swap with other gem
+							int temp = pGridArray[row][column];
+							pGridArray[row][column] = pGridArray[row-1][column];
+							pGridArray[row-1][column] = temp;
+
+							thisGem->state = GEMSTATE_IDLE;
+							thisGem->velocity = 0;
+							thisGem->y = 0;
+							thisGem->row--;
+							// checkMatchAllRows(pGridArray, pGemsArray);
+							// gameState = GAMESTATE_AWAIT_INPUT;
+							// checkDrop(pGridArray, pGemsArray);
+
+						}						
+					break;
+
+					case GEMSTATE_MOVE_DOWN:
+
+						thisGem->y += thisGem->velocity;
+
+						if (thisGem->y >= ROW_HEIGHT)
+						{
+							thisGem->state = GEMSTATE_IDLE;
+							thisGem->velocity = 0;
+							thisGem->y = 0;
+							thisGem->row++;
+						}
+					break;
+				}	
+			}
 		}
 
 		//Read user input & handle it
@@ -734,7 +967,10 @@ int main(int argc, char **argv){
 			}
 			//If user clicks the mouse
 			if (e.type == SDL_MOUSEBUTTONDOWN){
-				quit = true;
+				// std::cout << "x = " << (e.button.x) << "\n";
+				mouseX = e.button.x;
+				mouseY = e.button.y;
+				gemSelected = true;
 			}
 		}
 		//Render our scene
@@ -767,7 +1003,6 @@ int main(int argc, char **argv){
 	}
 */
 		// Draw the gems
-		int columnWidth = SCREEN_WIDTH / NUM_COLUMNS;
 		// int rowHeight = SCREEN_HEIGHT / NUM_ROWS;
 		int gemWidth, gemHeight;
 		int x, y;
@@ -796,25 +1031,32 @@ int main(int argc, char **argv){
 		}
 		*/
 
+		// Draw cursors
+		if (numGemsSelected > 0)
+		{
+			int cursorWidth, cursorHeight;
+			SDL_QueryTexture(cursorYellowImg, NULL, NULL, &cursorWidth, &cursorHeight);
+			renderTexture(cursorYellowImg, renderer, 
+				selectedGems[0][COLUMN] * COLUMN_WIDTH + COLUMN_WIDTH/2 - cursorWidth/2, 
+				selectedGems[0][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2);
+		
+			if (numGemsSelected == 2)
+			{
+				renderTexture(cursorGreenImg, renderer, 
+					selectedGems[1][COLUMN] * COLUMN_WIDTH + COLUMN_WIDTH/2 - cursorWidth/2, 
+					selectedGems[1][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2);
+			}
+		}
+
 		for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++)
 		{
 			if (pGemsArray[i].type != -1)
 			{
-				x = columnWidth * pGemsArray[i].column + columnWidth/2 - gemWidth/2;
+				x = COLUMN_WIDTH * pGemsArray[i].column + COLUMN_WIDTH/2 - gemWidth/2;
 				y = ROW_HEIGHT * pGemsArray[i].row + ROW_HEIGHT/2 - gemHeight/2;
-				renderTexture(gems[pGemsArray[i].type], renderer, x, y + pGemsArray[i].y);
+				renderTexture(gems[pGemsArray[i].type], renderer, x + pGemsArray[i].x, y + pGemsArray[i].y);
 			}
 		}
-
-		// xOffset++;
-		//Draw our image in the center of the window
-		//We need the foreground image's width to properly compute the position
-		//of it's top left corner so that the image will be centered
-		// int iW, iH;
-		// SDL_QueryTexture(image, NULL, NULL, &iW, &iH);
-		// int x = SCREEN_WIDTH / 2 - iW / 2;
-		// int y = SCREEN_HEIGHT / 2 - iH / 2;
-		// renderTexture(image, renderer, x+xOffset, y);
 
 		//Draw the texture
 		//SDL_RenderCopy(ren, tex, NULL, NULL);
