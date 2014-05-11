@@ -631,14 +631,108 @@ int checkSwapGems(int* gemPosArray)
 
 }
 
-// void checkMatchAfterSwap(int** pGrid, gem* pGems, gem pThisGem, int* gemPosArray, int gameState)
-// {
-// 	if (gameState == GAMESTATE_SWAP_LEFT || gameState == GAMESTATE_SWAP_RIGHT)
-// 	{
-// 		// Check for at least 3 matching gems to the left of the left gem
-// 		int numMatches
-// 	}
-// }
+bool checkMatchAfterSwap(int** pGrid, gem* pGems, gem* pThisGem)
+{
+	std::cout << "checkMatchAfterSwap\n";
+
+	bool foundMatch = false;
+
+	// First check horizontal matches
+	int direction = -1;
+	int numHorizontalMatches[2] = {0,0}; // {Matches left, matches right}
+	int row = pThisGem->row;
+	for (int numMatchesIndex = 0; numMatchesIndex < 2; numMatchesIndex++)
+	{
+		// On first iteration check for at least 2 matching gems to the left of the gem
+		bool match = true;
+		int compareColumn = pThisGem->column + direction;
+		while (match)
+		{
+			if (compareColumn > 0 && compareColumn < NUM_COLUMNS)
+			{
+				// std::cout << "checkMatchAfterSwap 2: compareColumn = " << compareColumn << "\n";
+				if (pGems[pGrid[row][compareColumn]].type == pThisGem->type)
+				{
+					// pGems[pGrid[row][compareColumn]].type = -1;
+					numHorizontalMatches[numMatchesIndex]++;
+					compareColumn += direction;
+				}
+				else
+				{
+					match = false;
+				}
+			}
+			else
+			{
+				match = false;
+			}
+		}
+
+		// Delete matching gems
+		if (numHorizontalMatches[numMatchesIndex] >= 2)
+		{
+			for (int i = 0; i < numHorizontalMatches[numMatchesIndex]; i++)
+			{
+				pGems[pGrid[row][pThisGem->column + direction * (i+1)]].type = -1;
+			}
+			pGems[pGrid[row][pThisGem->column]].type = -1;
+			foundMatch = true;
+		}
+
+		// Set to compare gems to the right for second iteration of loop
+		direction = 1;
+	}
+	std::cout << "checkMatchAfterSwap: numHorizontalMatches[0] = " << numHorizontalMatches[0] << ", numHorizontalMatches[1] = " << numHorizontalMatches[1] << "\n";
+
+	// Now check vertical matches
+	direction = -1;
+	int numVerticalMatches[2] = {0,0};	// {Matches above, matches below}
+	int column = pThisGem->column;
+	for (int numMatchesIndex = 0; numMatchesIndex < 2; numMatchesIndex++)
+	{
+		// On first iteration check for at least 2 matching gems above
+		bool match = true;
+		int compareRow = pThisGem->row + direction;
+		while (match)
+		{
+			if (compareRow > 0 && compareRow < NUM_ROWS)
+			{
+				// std::cout << "checkMatchAfterSwap 2: compareColumn = " << compareColumn << "\n";
+				if (pGems[pGrid[compareRow][column]].type == pThisGem->type)
+				{
+					numVerticalMatches[numMatchesIndex]++;
+					compareRow += direction;
+				}
+				else
+				{
+					match = false;
+				}
+			}
+			else
+			{
+				match = false;
+			}
+		}
+
+		// Delete matching gems
+		if (numVerticalMatches[numMatchesIndex] >= 2)
+		{
+			for (int i = 0; i < numVerticalMatches[numMatchesIndex]; i++)
+			{
+				// Mark them for deletion
+				pGems[pGrid[pThisGem->row + direction * (i+1)][column]].type = -1;
+			}
+			pGems[pGrid[pThisGem->row][column]].type = -1;
+			foundMatch = true;
+		}
+
+		// Set to compare gems below for second iteration of loop
+		direction = 1;
+	}
+	std::cout << "checkMatchAfterSwap: numVerticalMatches[0] = " << numVerticalMatches[0] << ", numVerticalMatches[1] = " << numVerticalMatches[1] << "\n";
+
+	return foundMatch;
+}
 
 
 int main(int argc, char **argv){
@@ -836,10 +930,11 @@ int main(int argc, char **argv){
 				// gameState = GAMESTATE_CHECKDROP;
 			break;
 
-			// case GAMESTATE_CHECKDROP:
-			// 	checkDrop(pGridArray, pGemsArray);
-			// 	gameState = GAMESTATE_DROP;
-			// break;
+			case GAMESTATE_CHECKDROP:
+				checkDrop(pGridArray, pGemsArray);
+				// gameState = GAMESTATE_DROP;
+				gameState = GAMESTATE_AWAIT_INPUT;
+			break;
 
 			// case GAMESTATE_DROP:
 			// 	dropGems(pGridArray, pGemsArray);
@@ -886,17 +981,23 @@ int main(int argc, char **argv){
 						// std::cout << "GEMSTATE_MOVE_LEFT: -COLUMN_WIDTH = " << (-COLUMN_WIDTH) << "\n";
 						if (thisGem->x <= -COLUMN_WIDTH)
 						{
-							std::cout << "GEMSTATE_MOVE_LEFT: state set to GEMSTATE_IDLE\n";
+							std::cout << "GEMSTATE_MOVE_LEFT\n";
 							// Swap with other gem
 							int temp = pGridArray[row][column];
 							pGridArray[row][column] = pGridArray[row][column-1];
 							pGridArray[row][column-1] = temp;
 
-							thisGem->state = GEMSTATE_IDLE;
 							thisGem->velocity = 0;
 							thisGem->x = 0;
 							thisGem->column--;
 
+							bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, thisGem);
+							thisGem->state = GEMSTATE_IDLE;
+
+							if (foundMatch)
+							{
+								gameState = GAMESTATE_CHECKDROP;
+							}
 							// checkMatchAllRows(pGridArray, pGemsArray);
 							// gameState = GAMESTATE_AWAIT_INPUT;
 							// checkDrop(pGridArray, pGemsArray);
@@ -909,10 +1010,18 @@ int main(int argc, char **argv){
 						
 						if (thisGem->x >= COLUMN_WIDTH)
 						{
-							thisGem->state = GEMSTATE_IDLE;
+							std::cout << "GEMSTATE_MOVE_RIGHT\n";
 							thisGem->velocity = 0;
 							thisGem->x = 0;
 							thisGem->column++;
+
+							bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, thisGem);							
+							thisGem->state = GEMSTATE_IDLE;
+
+							if (foundMatch)
+							{
+								gameState = GAMESTATE_CHECKDROP;
+							}
 						}						
 					break;
 
@@ -922,18 +1031,26 @@ int main(int argc, char **argv){
 						
 						if (thisGem->y <= -ROW_HEIGHT)
 						{
+							std::cout << "GEMSTATE_MOVE_UP\n";
 							// Swap with other gem
 							int temp = pGridArray[row][column];
 							pGridArray[row][column] = pGridArray[row-1][column];
 							pGridArray[row-1][column] = temp;
 
-							thisGem->state = GEMSTATE_IDLE;
 							thisGem->velocity = 0;
 							thisGem->y = 0;
 							thisGem->row--;
+
+							bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, thisGem);	
+							thisGem->state = GEMSTATE_IDLE;
 							// checkMatchAllRows(pGridArray, pGemsArray);
 							// gameState = GAMESTATE_AWAIT_INPUT;
 							// checkDrop(pGridArray, pGemsArray);
+
+							if (foundMatch)
+							{
+								gameState = GAMESTATE_CHECKDROP;
+							}
 
 						}						
 					break;
@@ -944,10 +1061,18 @@ int main(int argc, char **argv){
 
 						if (thisGem->y >= ROW_HEIGHT)
 						{
-							thisGem->state = GEMSTATE_IDLE;
+							std::cout << "GEMSTATE_MOVE_DOWN\n";
 							thisGem->velocity = 0;
 							thisGem->y = 0;
 							thisGem->row++;
+
+							bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, thisGem);	
+							thisGem->state = GEMSTATE_IDLE;
+							
+							if (foundMatch)
+							{
+								gameState = GAMESTATE_CHECKDROP;
+							}
 						}
 					break;
 				}	
