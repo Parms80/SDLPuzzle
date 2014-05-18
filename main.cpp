@@ -353,7 +353,9 @@ bool checkMatchAllRows(int** pGrid, gem* pGems)
 		for (int column = 0; column < NUM_COLUMNS-2; column++)
 		{
 			int gemToCompare = pGems[tempGridRow[row][column]].type;
+
 			std::cout << "checkMatchAllRows: gemToCompare = " << gemToCompare << ", row = " << row << ", column = " << column << "\n";
+
 			if (gemToCompare != -1)
 			{
 				// Now check for at least 2 adjacent matching gems to the right
@@ -367,6 +369,7 @@ bool checkMatchAllRows(int** pGrid, gem* pGems)
 					while (matchRow && column+j < NUM_COLUMNS)
 					{
 						std::cout << "checkMatchAllRows: j = " << j << "\n";
+
 						if (pGems[tempGridRow[row][column+j]].type == gemToCompare)
 						{
 							std::cout << "checkMatchAllRows: mark for deletion\n";
@@ -972,6 +975,17 @@ int main(int argc, char **argv){
 				// 	std::cout << "GAMESTATE_CHECK_MATCH 2\n";
 				// 	gameState = GAMESTATE_AWAIT_INPUT;
 				// }
+
+				std::cout << "main\n";
+				for (int row = 0; row < NUM_ROWS; row++)
+				{
+					std::cout << "[";
+					for (int column = 0; column < NUM_COLUMNS; column++)
+					{
+						std::cout << pGemsArray[pGridArray[row][column]].type << ",";
+					}
+					std::cout << "]\n";
+				}
 
 				std::cout << "main\n";
 				for (int row = 0; row < NUM_ROWS; row++)
