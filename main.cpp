@@ -450,111 +450,6 @@ bool checkMatchAllRows(int** pGrid, gem* pGems)
 	}
 }
 
-/*
-void checkMatch(int** pGrid)
-{
-	//int** tempGrid = new int*[NUM_ROWS];
-	int tempGridRow[NUM_ROWS][NUM_COLUMNS] = 
-						  {{0,0,0,0,0,0,0,0},
-						   {0,0,0,0,0,0,0,0},
-						   {0,0,0,0,0,0,0,0},
-						   {0,0,0,0,0,0,0,0},
-						   {0,0,0,0,0,0,0,0},
-						   {0,0,0,0,0,0,0,0},
-						   {0,0,0,0,0,0,0,0},
-						   {0,0,0,0,0,0,0,0}};
-	// memcpy(tempGridRow, pGrid, sizeof(int)*NUM_ROWS*NUM_COLUMNS);
-	// Copy the grid to a temporary grid to mark row matches
-	std::copy(&pGrid[0][0], &pGrid[0][0]+NUM_ROWS*NUM_COLUMNS, &tempGridRow[0][0]);
-
-	for (int row = 0; row < NUM_ROWS; row++)
-	{
-		std::cout << "[";
-		for (int column = 0; column < NUM_COLUMNS; column++)
-		{
-			std::cout << tempGridRow[row][column] << ",";
-		}
-		std::cout << "]\n";
-	}
-
-	// for (int row = 0; row < NUM_ROWS; row++)
-	// {
-	// 	delete [] tempGrid[row];
-	// }
-	// delete [] tempGrid;
-
-	for (int row = 0; row < NUM_ROWS; row++)
-	{
-		int column = 0;
-		while (column < NUM_COLUMNS)
-		//for (int column = 0; column < NUM_COLUMNS-2; column++)
-		{
-			std::cout << "row = " << row << ", column = " << column << "\n";
-			int gemToCompare = tempGridRow[row][column];
-			int numMatches = 1;
-
-			if (gemToCompare != -1)
-			{
-				std::cout << "1\n";
-				// Continue marking matching gems until reached a different gem
-				bool match = true;
-				int i = 1;
-				while (match && column+i < NUM_COLUMNS)
-				{
-					std::cout << "1.1: column+i = " << (column+i) << ", tempGridRow["<<row<<"]["<<(column+i)<<"] = "<<tempGridRow[row][column+i]<<
-					", gemToCompare = "<<gemToCompare<<"\n";
-					if (tempGridRow[row][column+i] == gemToCompare)
-					{
-						std::cout << "Match\n";
-						numMatches++;
-						i++;
-						std::cout << "numMatches = " << numMatches << "\n";
-					}
-					else
-					{
-						std::cout << "No match\n";
-						match = false;
-					}
-				}
-
-				// Check and get rid of vertical matches connected to this matching row
-				// std::cout << "1.2: numMatches = " << numMatches << "\n";
-				// for (i = 0; i < numMatches; i++)
-				// {
-					// checkMatchRow(pGrid, row, column+i);
-				// }
-
-				std::cout << "2: numMatches = " << numMatches << "\n";
-				// Mark all matching gems for removal
-				if (numMatches >= 3)
-				{
-					//int j;
-					for (i = 0; i < numMatches; i++)
-					{
-						tempGridRow[row][column+i] = -1;
-					}
-					column = column+i;
-
-					std::cout << "3: column = " << column << "\n";
-				}
-				else
-				{
-					std::cout << "4: column = " << column << "\n";
-					column += numMatches;
-				}
-			}
-			else
-			{
-				// No gem here so move to next column
-				std::cout << "4: column = " << column << "\n";
-				column++;
-			}
-		}
-	}
-
-	checkMatchAllColumns(pGrid);
-}
-*/
 
 bool checkDrop(int** pGrid, gem* pGems)
 {
@@ -720,6 +615,63 @@ int checkSwapGems(int* gemPosArray)
 		return -1;
 	}
 
+}
+
+
+int setSwapGems(int state, gem* pGemsArray, int** pGridArray, int row1, int column1, int row2, int column2)
+{
+	switch (state)
+	{
+		case GAMESTATE_SWAP_LEFT:
+
+			// Move right gem left
+			pGemsArray[pGridArray[row1][column1]].velocity = -SWAP_SPEED;
+			pGemsArray[pGridArray[row1][column1]].state = GEMSTATE_MOVE_LEFT;
+
+			// Move left gem right
+			pGemsArray[pGridArray[row2][column2]].velocity = SWAP_SPEED;
+			pGemsArray[pGridArray[row2][column2]].state = GEMSTATE_MOVE_RIGHT;
+			return GAMESTATE_SWAP_LEFT;
+		break;
+
+		case GAMESTATE_SWAP_RIGHT:
+			// Move left gem right
+			pGemsArray[pGridArray[row1][column1]].velocity = SWAP_SPEED;
+			pGemsArray[pGridArray[row1][column1]].state = GEMSTATE_MOVE_RIGHT;
+
+			// Move right gem left
+			pGemsArray[pGridArray[row2][column2]].velocity = -SWAP_SPEED;
+			pGemsArray[pGridArray[row2][column2]].state = GEMSTATE_MOVE_LEFT;
+			return GAMESTATE_SWAP_RIGHT;
+
+		break;
+
+		case GAMESTATE_SWAP_UP:
+			// Move bottom gem up
+			pGemsArray[pGridArray[row1][column1]].velocity = -SWAP_SPEED;
+			pGemsArray[pGridArray[row1][column1]].state = GEMSTATE_MOVE_UP;
+
+			// Move right gem left
+			pGemsArray[pGridArray[row2][column2]].velocity = SWAP_SPEED;
+			pGemsArray[pGridArray[row2][column2]].state = GEMSTATE_MOVE_DOWN;
+			return GAMESTATE_SWAP_UP;
+		break;
+
+		case GAMESTATE_SWAP_DOWN:
+			// Move top gem down
+			pGemsArray[pGridArray[row1][column1]].velocity = SWAP_SPEED;
+			pGemsArray[pGridArray[row1][column1]].state = GEMSTATE_MOVE_DOWN;
+
+			// Move bottom gem up
+			pGemsArray[pGridArray[row2][column2]].velocity = -SWAP_SPEED;
+			pGemsArray[pGridArray[row2][column2]].state = GEMSTATE_MOVE_UP;
+			return GAMESTATE_SWAP_DOWN;
+		break;
+
+		default:
+			return -1;
+		break;
+	}
 }
 
 bool checkMatchAfterSwap(int** pGrid, gem* pGems, gem* pThisGem)
@@ -960,6 +912,7 @@ int main(int argc, char **argv){
 	int thisRow, thisColumn;
 	bool gemsDropping;
 	bool paused = false;
+	bool cancelSwap = false;
 
 	while (!quit)
 	{
@@ -1070,9 +1023,32 @@ int main(int argc, char **argv){
 					// Check if ready to swap
 					if (numGemsSelected == 2)
 					{
-						int row;
-						int column;
+						// int row;
+						// int column;
 
+						int state = checkSwapGems((int*)selectedGems);
+						state = setSwapGems(state, pGemsArray, pGridArray, selectedGems[0][ROW], selectedGems[0][COLUMN], selectedGems[1][ROW], selectedGems[1][COLUMN]);
+						if (state == -1)
+						{
+
+							// Remove all cursors
+							numGemsSelected = 0;
+
+							// Set new cursor to this position
+							cursorRow = mouseY / ROW_HEIGHT;
+							cursorColumn = mouseX / COLUMN_WIDTH;
+
+							// Store the location of the selected gem
+							selectedGems[numGemsSelected-1][ROW] = cursorRow;
+							selectedGems[numGemsSelected-1][COLUMN] = cursorColumn; 
+							gemSelected = true;
+						}
+						else
+						{
+							gameState = state;
+						}
+
+						/*
 						switch (checkSwapGems((int*)selectedGems))
 						{
 							case GAMESTATE_SWAP_LEFT:
@@ -1153,6 +1129,7 @@ int main(int argc, char **argv){
 								gemSelected = true;
 							break;
 						}
+						*/
 					}
 				}
 				
@@ -1180,6 +1157,8 @@ int main(int argc, char **argv){
 				
 				if (pGemsArray[pGridArray[thisRow][thisColumn]].x <= -COLUMN_WIDTH)
 				{
+					numGemsSelected = 0;
+
 					// std::cout << "GEMSTATE_MOVE_LEFT\n";
 					// Swap with other gem
 					int temp = pGridArray[thisRow][thisColumn];
@@ -1198,8 +1177,13 @@ int main(int argc, char **argv){
 					pGemsArray[pGridArray[thisRow][thisColumn-1]].column--;
 					pGemsArray[pGridArray[thisRow][thisColumn-1]].state = GEMSTATE_IDLE;
 
-					bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn]]);
-					bool foundMatch2 = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn-1]]);
+					bool foundMatch = false;
+					bool foundMatch2 = false;
+					if (!cancelSwap)
+					{
+						foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn]]);
+						foundMatch2 = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn-1]]);
+					}
 
 					if (foundMatch || foundMatch2)
 					{
@@ -1207,7 +1191,19 @@ int main(int argc, char **argv){
 					}
 					else
 					{
-						gameState = GAMESTATE_AWAIT_INPUT;
+						if (cancelSwap)
+						{
+							// Gems have gone back to their original positions after cancelling the swap
+							cancelSwap = false;
+							gameState = GAMESTATE_AWAIT_INPUT;
+						}
+						else
+						{
+							// Swap the gems back to their original positions
+							gameState = setSwapGems(gameState, pGemsArray, pGridArray, selectedGems[0][ROW], selectedGems[0][COLUMN], selectedGems[1][ROW], selectedGems[1][COLUMN]);
+							cancelSwap = true;
+						}
+	
 					}
 					// checkMatchAllRows(pGridArray, pGemsArray);
 					// gameState = GAMESTATE_AWAIT_INPUT;
@@ -1246,6 +1242,8 @@ int main(int argc, char **argv){
 				
 				if (pGemsArray[pGridArray[thisRow][thisColumn]].y <= -ROW_HEIGHT)
 				{
+					numGemsSelected = 0;
+					
 					// std::cout << "GAMESTATE_MOVE_UP\n";
 					// Swap with other gem
 					int temp = pGridArray[thisRow][thisColumn];
@@ -1264,16 +1262,32 @@ int main(int argc, char **argv){
 					pGemsArray[pGridArray[thisRow-1][thisColumn]].row--;
 					pGemsArray[pGridArray[thisRow-1][thisColumn]].state = GEMSTATE_IDLE;
 
-					bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn]]);
-					bool foundMatch2 = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow-1][thisColumn]]);
+					bool foundMatch = false;
+					bool foundMatch2 = false;
+					if (!cancelSwap)
+					{
+						foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn]]);
+						foundMatch2 = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow-1][thisColumn]]);
+					}
 
 					if (foundMatch || foundMatch2)
 					{
 						gameState = GAMESTATE_CHECKDROP;
 					}
 					else
-					{
-						gameState = GAMESTATE_AWAIT_INPUT;
+					{					
+						if (cancelSwap)
+						{
+							// Gems have gone back to their original positions after cancelling the swap
+							cancelSwap = false;
+							gameState = GAMESTATE_AWAIT_INPUT;
+						}
+						else
+						{
+							// Swap the gems back to their original positions
+							gameState = setSwapGems(gameState, pGemsArray, pGridArray, selectedGems[0][ROW], selectedGems[0][COLUMN], selectedGems[1][ROW], selectedGems[1][COLUMN]);
+							cancelSwap = true;
+						}
 					}
 					// checkMatchAllRows(pGridArray, pGemsArray);
 					// gameState = GAMESTATE_AWAIT_INPUT;
@@ -1368,28 +1382,6 @@ int main(int argc, char **argv){
 						row++;
 						gemsAdded = true;
 					}
-
-					// Find dead gems in gems array and re-init them at top of grid
-					// while (row > 0)
-					// {
-					// 	bool found = false;
-					// 	while (!found)
-					// 	{
-					// 		if (pGemsArray[i].type == -1)
-					// 		{
-					// 			pGemsArray[i].type = 0;
-					// 			pGemsArray[i].state = GEMSTATE_ENTER;
-					// 			pGemsArray[i].row = 0;
-					// 			pGemsArray[i].column = column;
-					// 			pGemsArray[i].y = -(ROW_HEIGHT+10)*row;
-					// 			pGemsArray[i].velocity = 1;
-					// 			pGemsArray[i].dropToRow = row;
-					// 			found = true;
-					// 		}
-					// 		i++;
-					// 	}
-					// 	row--;
-					// }
 				}
 
 				// std::cout << "Drop to\n";
@@ -1405,6 +1397,7 @@ int main(int argc, char **argv){
 
 				// std::cout << "Gems added = " << i << "\n";
 				// gameState = GAMESTATE_CHECKDROP;
+				numGemsSelected = 0;
 				if (gemsAdded)
 				{
 					gameState = GAMESTATE_DROP;
@@ -1460,119 +1453,6 @@ int main(int argc, char **argv){
 							thisGem->state = GEMSTATE_IDLE;
 						}
 					break;
-/*
-					case GEMSTATE_MOVE_LEFT:
-
-						thisGem->x += thisGem->velocity;
-						// std::cout << "In GEMSTATE_MOVE_LEFT: x = " << pGemsArray[pGridArray[row][column]].x << ", velocity = " << thisGem->velocity << " \n";
-						// swapGem(pGridArray, pGemsArray[pGridArray[row][column]], pGemsArray);
-						// std::cout << "GEMSTATE_MOVE_LEFT: -COLUMN_WIDTH = " << (-COLUMN_WIDTH) << "\n";
-						if (thisGem->x <= -COLUMN_WIDTH)
-						{
-							std::cout << "GEMSTATE_MOVE_LEFT\n";
-					std::cout << "column before = " << thisGem->column << "\n";
-							// Swap with other gem
-							int temp = pGridArray[row][column];
-							pGridArray[row][column] = pGridArray[row][column-1];
-							pGridArray[row][column-1] = temp;
-
-							thisGem->velocity = 0;
-							thisGem->x = 0;
-							thisGem->column--;
-							
-					std::cout << "column after = " << thisGem->column << "\n";
-
-							// pGemsArray[pGridArray[row][column+1]].velocity = 0;
-							// pGemsArray[pGridArray[row][column+1]].x = 0;
-							// pGemsArray[pGridArray[row][column+1]].column++;
-							//thisGem = &pGemsArray[pGridArray[row][column]];
-							bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, thisGem);
-							thisGem->state = GEMSTATE_IDLE;
-
-							if (foundMatch)
-							{
-								gameState = GAMESTATE_CHECKDROP;
-							}
-							// checkMatchAllRows(pGridArray, pGemsArray);
-							// gameState = GAMESTATE_AWAIT_INPUT;
-							// checkDrop(pGridArray, pGemsArray);
-						}						
-					break;
-
-					case GEMSTATE_MOVE_RIGHT:
-
-						thisGem->x += thisGem->velocity;
-						
-						if (thisGem->x >= COLUMN_WIDTH)
-						{
-							std::cout << "GEMSTATE_MOVE_RIGHT\n";
-							thisGem->velocity = 0;
-							thisGem->x = 0;
-							thisGem->column++;
-							
-							//thisGem = &pGemsArray[pGridArray[row][column]];
-
-							bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, thisGem);							
-							thisGem->state = GEMSTATE_IDLE;
-
-							if (foundMatch)
-							{
-								gameState = GAMESTATE_CHECKDROP;
-							}
-						}						
-					break;
-
-					case GEMSTATE_MOVE_UP:
-
-						thisGem->y += thisGem->velocity;
-						
-						if (thisGem->y <= -ROW_HEIGHT)
-						{
-							std::cout << "GEMSTATE_MOVE_UP\n";
-							// Swap with other gem
-							int temp = pGridArray[row][column];
-							pGridArray[row][column] = pGridArray[row-1][column];
-							pGridArray[row-1][column] = temp;
-
-							thisGem->velocity = 0;
-							thisGem->y = 0;
-							thisGem->row--;
-
-							bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, thisGem);	
-							thisGem->state = GEMSTATE_IDLE;
-							// checkMatchAllRows(pGridArray, pGemsArray);
-							// gameState = GAMESTATE_AWAIT_INPUT;
-							// checkDrop(pGridArray, pGemsArray);
-
-							if (foundMatch)
-							{
-								gameState = GAMESTATE_CHECKDROP;
-							}
-
-						}						
-					break;
-
-					case GEMSTATE_MOVE_DOWN:
-
-						thisGem->y += thisGem->velocity;
-
-						if (thisGem->y >= ROW_HEIGHT)
-						{
-							std::cout << "GEMSTATE_MOVE_DOWN\n";
-							thisGem->velocity = 0;
-							thisGem->y = 0;
-							thisGem->row++;
-
-							bool foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, thisGem);	
-							thisGem->state = GEMSTATE_IDLE;
-
-							if (foundMatch)
-							{
-								gameState = GAMESTATE_CHECKDROP;
-							}
-						}
-					break;
-					*/
 				}	
 			}
 		}
