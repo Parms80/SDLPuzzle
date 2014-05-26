@@ -1,7 +1,9 @@
 #include <iostream>
 #include <SDL.h>
 #include <SDL_image.h>
+// #include <SDL_ttf.h>
 // #include "Render.h"
+#include <time.h>
 
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
@@ -63,6 +65,44 @@ void logSDLError(std::ostream &os, const std::string &msg){
 	os << msg << " error: " << SDL_GetError() << std::endl;
 }
 
+
+/**
+* Render the message we want to display to a texture for drawing
+* @param message The message we want to display
+* @param fontFile The font we want to use to render the text
+* @param color The color we want the text to be
+* @param fontSize The size we want the font to be
+* @param renderer The renderer to load the texture in
+* @return An SDL_Texture containing the rendered message, or nullptr if something went wrong
+*/
+/*
+SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
+	SDL_Color color, int fontSize, SDL_Renderer *renderer)
+{
+	//Open the font
+	TTF_Font *font = TTF_OpenFont(fontFile.c_str(), fontSize);
+	if (font == nullptr){
+		logSDLError(std::cout, "TTF_OpenFont");
+		return nullptr;
+	}	
+	//We need to first render to a surface as that's what TTF_RenderText
+	//returns, then load that surface into a texture
+	SDL_Surface *surf = TTF_RenderText_Blended(font, message.c_str(), color);
+	if (surf == nullptr){
+		TTF_CloseFont(font);
+		logSDLError(std::cout, "TTF_RenderText");
+		return nullptr;
+	}
+	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
+	if (texture == nullptr){
+		logSDLError(std::cout, "CreateTexture");
+	}
+	//Clean up the surface and font
+	SDL_FreeSurface(surf);
+	TTF_CloseFont(font);
+	return texture;
+}
+*/
 
 /*
  * Loads an image into a texture on the rendering device
@@ -152,6 +192,7 @@ int** initGrid(gem* pGems)
 		}
 	}
 
+/*
 	std::cout << "initGrid pGems\n";
 	for (int row = 0; row < NUM_ROWS; row++)
 	{
@@ -173,11 +214,12 @@ int** initGrid(gem* pGems)
 		}
 		std::cout << "]\n";
 	}
+	*/
 
 	return pGrid;
 }
 
-
+/*
 void checkMatchColumn(int** pGrid, gem* pGems, int row, int column)
 {
 	int gemToCompare = pGems[pGrid[row][column]].type;
@@ -204,6 +246,7 @@ void checkMatchColumn(int** pGrid, gem* pGems, int row, int column)
 		pGems[pGrid[row][column]].type = -1;	// Get rid of origin gem
 	}
 }
+*/
 /*
 void checkMatch(int** pGrid, int numGemTypes)
 {
@@ -267,7 +310,17 @@ void checkMatch(int** pGrid, int numGemTypes)
 }
 */
 
-bool checkMatchAllColumns(int** pGrid, gem* pGems)
+
+void addScore(int numGemsInMatch, int* pScore)
+{
+
+	*pScore += 100 * numGemsInMatch;
+
+	std::cout << "Score: " << *pScore << "\n";
+}
+
+
+bool checkMatchAllColumns(int** pGrid, gem* pGems, int* pScore)
 {
 	// int tempGridRow[NUM_ROWS][NUM_COLUMNS] = 
 	// 					  {{0,0,0,0,0,0,0,0},
@@ -311,6 +364,7 @@ bool checkMatchAllColumns(int** pGrid, gem* pGems)
 					}
 					pGems[pGrid[row][column]].type = -1;	// Get rid of origin gem
 					foundMatch = true;
+					addScore (j, pScore);
 				}
 			}
 		}
@@ -319,7 +373,7 @@ bool checkMatchAllColumns(int** pGrid, gem* pGems)
 	return foundMatch;
 }
 
-bool checkMatchAllRows(int** pGrid, gem* pGems)
+bool checkMatchAllRows(int** pGrid, gem* pGems, int* pScore)
 {
 	int tempGridRow[NUM_ROWS][NUM_COLUMNS] = 
 						  {{0,0,0,0,0,0,0,0},
@@ -343,15 +397,15 @@ bool checkMatchAllRows(int** pGrid, gem* pGems)
 	}
 
 	// std::cout << "checkMatchAllRows\n";
-	for (int row = 0; row < NUM_ROWS; row++)
-	{
-		std::cout << "[";
-		for (int column = 0; column < NUM_COLUMNS; column++)
-		{
-			std::cout << pGems[tempGridRow[row][column]].type << ",";
-		}
-		std::cout << "]\n";
-	}
+	// for (int row = 0; row < NUM_ROWS; row++)
+	// {
+	// 	std::cout << "[";
+	// 	for (int column = 0; column < NUM_COLUMNS; column++)
+	// 	{
+	// 		std::cout << pGems[tempGridRow[row][column]].type << ",";
+	// 	}
+	// 	std::cout << "]\n";
+	// }
 
 	bool foundMatch = false;
 	for (int row = 0; row < NUM_ROWS; row++)
@@ -390,6 +444,7 @@ bool checkMatchAllRows(int** pGrid, gem* pGems)
 					}
 					tempGridRow[row][column] = -1;	// Get rid of origin gem
 					foundMatch = true;
+					addScore (j, pScore);
 				}
 			}
 		}
@@ -405,7 +460,7 @@ bool checkMatchAllRows(int** pGrid, gem* pGems)
 	// 	std::cout << "]\n";
 	// }
 
-	bool foundMatchColumns = checkMatchAllColumns(pGrid, pGems);
+	bool foundMatchColumns = checkMatchAllColumns(pGrid, pGems, pScore);
 
 	// std::cout << "After checkMatchAllColumns\n";
 	// for (int row = 0; row < NUM_ROWS; row++)
@@ -455,15 +510,15 @@ bool checkMatchAllRows(int** pGrid, gem* pGems)
 bool checkDrop(int** pGrid, gem* pGems)
 {
 	// std::cout << "checkDrop\n";
-	for (int row = 0; row < NUM_ROWS; row++)
-	{
-		std::cout << "[";
-		for (int column = 0; column < NUM_COLUMNS; column++)
-		{
-			std::cout << pGems[pGrid[row][column]].type << ",";
-		}
-		std::cout << "]\n";
-	}
+	// for (int row = 0; row < NUM_ROWS; row++)
+	// {
+	// 	std::cout << "[";
+	// 	for (int column = 0; column < NUM_COLUMNS; column++)
+	// 	{
+	// 		std::cout << pGems[pGrid[row][column]].type << ",";
+	// 	}
+	// 	std::cout << "]\n";
+	// }
 
 	bool shouldDrop = false;
 
@@ -675,7 +730,8 @@ int setSwapGems(int state, gem* pGemsArray, int** pGridArray, int row1, int colu
 	}
 }
 
-bool checkMatchAfterSwap(int** pGrid, gem* pGems, gem* pThisGem)
+
+bool checkMatchAfterSwap(int** pGrid, gem* pGems, gem* pThisGem, int* pScore)
 {
 	// std::cout << "checkMatchAfterSwap\n";
 
@@ -760,6 +816,7 @@ bool checkMatchAfterSwap(int** pGrid, gem* pGems, gem* pThisGem)
 		}
 		//pGems[pGrid[pThisGem->row][column]].type = -1;
 		foundMatch = true;
+		addScore(numHorizontalMatches[0] + numHorizontalMatches[1] + 1, pScore);
 	}
 	// std::cout << "checkMatchAfterSwap: numHorizontalMatches[0] = " << numHorizontalMatches[0] << ", numHorizontalMatches[1] = " << numHorizontalMatches[1] << "\n";
 
@@ -815,15 +872,16 @@ bool checkMatchAfterSwap(int** pGrid, gem* pGems, gem* pThisGem)
 	// Delete matching gems
 	if (numVerticalMatches[0] + numVerticalMatches[1]  >= 2)
 	{
-		std::cout << "Found vertical match\n";
+		// std::cout << "Found vertical match\n";
 		for (int row = pThisGem->row - numVerticalMatches[0]; row <= pThisGem->row + numVerticalMatches[1]; row++)
 		{
-				std::cout << "Delete gem at row " << row << ", column " << column << "\n";
+				// std::cout << "Delete gem at row " << row << ", column " << column << "\n";
 			// Mark them for deletion
 			pGems[pGrid[row][column]].type = -1;
 		}
 		//pGems[pGrid[pThisGem->row][column]].type = -1;
 		foundMatch = true;
+		addScore(numVerticalMatches[0] + numVerticalMatches[1] + 1, pScore);
 	}
 	// std::cout << "checkMatchAfterSwap: numVerticalMatches[0] = " << numVerticalMatches[0] << ", numVerticalMatches[1] = " << numVerticalMatches[1] << "\n";
 
@@ -837,11 +895,17 @@ bool checkMatchAfterSwap(int** pGrid, gem* pGems, gem* pThisGem)
 }
 
 
+
 int main(int argc, char **argv){
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
 		logSDLError(std::cout, "SDL_Init");
 		return 1;
 	}
+
+	// if (TTF_Init() != 0){
+	// logSDLError(std::cout, "TTF_Init");
+	// return 1;
+	// }
 
 	SDL_Window *window = SDL_CreateWindow("Hello World!", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT,
 	SDL_WINDOW_SHOWN);
@@ -900,6 +964,8 @@ int main(int argc, char **argv){
 	// int* pGemStateArray = nullptr;
 	gem* pGemsArray = new gem[NUM_ROWS * NUM_COLUMNS];
 
+	int score;
+
 	int mouseX = 0;
 	int mouseY = 0;
 	int numGemsSelected = 0;
@@ -918,11 +984,22 @@ int main(int argc, char **argv){
 	int dragStartX;
 	int dragStartY;
 	bool dragStarted = false;
+	time_t timer;
+	time_t startTime;
+	// time_t pauseStartTime;
 
 	while (!quit)
 	{
 		if (!paused)
 		{
+
+			timer = time(0);
+			// std::cout << "timer = " << timer << ", timer - startTime = " << (timer - startTime) << "\n";
+			if (timer - startTime >= 60)
+			{
+				std::cout << "Init\n";
+				gameState = GAMESTATE_INIT;
+			}
 			switch (gameState)
 			{
 				case GAMESTATE_INIT:
@@ -932,12 +1009,15 @@ int main(int argc, char **argv){
 						pGemsArray[i].state = GEMSTATE_IDLE;
 					}
 					pGridArray = initGrid(pGemsArray);
+					score = 0;
+					startTime = time(0);
+					// std::cout << "startTime = " << startTime << "\n";
 					gameState = GAMESTATE_INITIAL_CHECK_MATCH;
 				break;
 
 				case GAMESTATE_INITIAL_CHECK_MATCH:
 					SDL_Delay(1000);
-					checkMatchAllRows(pGridArray, pGemsArray);
+					checkMatchAllRows(pGridArray, pGemsArray, &score);
 					// gameState = GAMESTATE_AWAIT_INPUT;
 					// checkDrop(pGridArray, pGemsArray);
 					gameState = GAMESTATE_CHECKDROP;
@@ -954,21 +1034,11 @@ int main(int argc, char **argv){
 						{
 							if (pGemsArray[pGridArray[row][column]].prevState == GEMSTATE_FALL)
 							{
-								foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[row][column]]);
+								foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[row][column]], &score);
 							}
 						}
 					}
 
-					// if (foundMatch)
-					// {
-					// 	std::cout << "foundMatch. Going to GAMESTATE_DROP\n";
-					// 	gameState = GAMESTATE_CHECKDROP;
-					// }
-					// else
-					// {
-					// 	std::cout << "Not foundMatch. Going to GAMESTATE_AWAIT_INPUT\n";
-					// 	gameState = GAMESTATE_AWAIT_INPUT;
-					// }
 					gameState = GAMESTATE_CHECKDROP;
 
 					for (int row = NUM_ROWS-1; row >= 0; row--)
@@ -978,29 +1048,6 @@ int main(int argc, char **argv){
 							pGemsArray[pGridArray[row][column]].prevState = -1;
 						}
 					}
-					// if (checkMatchAllRows(pGridArray, pGemsArray))
-					// {
-					// 	// Found match(es)
-					// 	std::cout << "GAMESTATE_CHECK_MATCH 1\n";
-						
-					// 	gameState = GAMESTATE_CHECKDROP;
-					// }
-					// else
-					// {
-					// 	std::cout << "GAMESTATE_CHECK_MATCH 2\n";
-					// 	gameState = GAMESTATE_AWAIT_INPUT;
-					// }
-
-					// std::cout << "main\n";
-					// for (int row = 0; row < NUM_ROWS; row++)
-					// {
-					// 	std::cout << "[";
-					// 	for (int column = 0; column < NUM_COLUMNS; column++)
-					// 	{
-					// 		std::cout << pGemsArray[pGridArray[row][column]].type << ",";
-					// 	}
-					// 	std::cout << "]\n";
-					// }
 
 				break;
 
@@ -1019,7 +1066,6 @@ int main(int argc, char **argv){
 						cursorRow = mouseY / ROW_HEIGHT;
 						cursorColumn = mouseX / COLUMN_WIDTH;
 
-						std::cout << "cursorColumn = " << cursorColumn << "\n";
 						// Store the location of the selected gem
 						selectedGems[numGemsSelected-1][ROW] = cursorRow;
 						selectedGems[numGemsSelected-1][COLUMN] = cursorColumn; 
@@ -1029,9 +1075,6 @@ int main(int argc, char **argv){
 						// Check if ready to swap
 						if (numGemsSelected == 2)
 						{
-							// int row;
-							// int column;
-
 							int state = checkSwapGems((int*)selectedGems);
 							state = setSwapGems(state, pGemsArray, pGridArray, selectedGems[0][ROW], selectedGems[0][COLUMN], selectedGems[1][ROW], selectedGems[1][COLUMN]);
 							if (state == -1)
@@ -1053,89 +1096,6 @@ int main(int argc, char **argv){
 							{
 								gameState = state;
 							}
-
-							/*
-							switch (checkSwapGems((int*)selectedGems))
-							{
-								case GAMESTATE_SWAP_LEFT:
-
-									// Move right gem left
-									row = selectedGems[0][ROW];
-									column = selectedGems[0][COLUMN];
-									pGemsArray[pGridArray[row][column]].velocity = -SWAP_SPEED;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_LEFT;
-
-									// Move left gem right
-									row = selectedGems[1][ROW];
-									column = selectedGems[1][COLUMN];
-									pGemsArray[pGridArray[row][column]].velocity = SWAP_SPEED;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_RIGHT;
-									// gameState = GAMESTATE_SWAP_HORIZONTAL;
-									gameState = GAMESTATE_SWAP_LEFT;
-								break;
-
-								case GAMESTATE_SWAP_RIGHT:
-									// Move left gem right
-									row = selectedGems[0][ROW];
-									column = selectedGems[0][COLUMN];
-									pGemsArray[pGridArray[row][column]].velocity = SWAP_SPEED;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_RIGHT;
-
-									// Move right gem left
-									row = selectedGems[1][ROW];
-									column = selectedGems[1][COLUMN];
-									pGemsArray[pGridArray[row][column]].velocity = -SWAP_SPEED;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_LEFT;
-									gameState = GAMESTATE_SWAP_RIGHT;
-
-								break;
-
-								case GAMESTATE_SWAP_UP:
-									// Move bottom gem up
-									row = selectedGems[0][ROW];
-									column = selectedGems[0][COLUMN];
-									pGemsArray[pGridArray[row][column]].velocity = -SWAP_SPEED;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_UP;
-
-									// Move right gem left
-									row = selectedGems[1][ROW];
-									column = selectedGems[1][COLUMN];
-									pGemsArray[pGridArray[row][column]].velocity = SWAP_SPEED;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_DOWN;
-									gameState = GAMESTATE_SWAP_UP;
-								break;
-
-								case GAMESTATE_SWAP_DOWN:
-									// Move top gem down
-									row = selectedGems[0][ROW];
-									column = selectedGems[0][COLUMN];
-									pGemsArray[pGridArray[row][column]].velocity = SWAP_SPEED;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_DOWN;
-
-									// Move bottom gem up
-									row = selectedGems[1][ROW];
-									column = selectedGems[1][COLUMN];
-									pGemsArray[pGridArray[row][column]].velocity = -SWAP_SPEED;
-									pGemsArray[pGridArray[row][column]].state = GEMSTATE_MOVE_UP;
-									gameState = GAMESTATE_SWAP_DOWN;
-								break;
-
-								default:
-
-									// Remove all cursors
-									numGemsSelected = 0;
-
-									// Set new cursor to this position
-									cursorRow = mouseY / ROW_HEIGHT;
-									cursorColumn = mouseX / COLUMN_WIDTH;
-
-									// Store the location of the selected gem
-									selectedGems[numGemsSelected-1][ROW] = cursorRow;
-									selectedGems[numGemsSelected-1][COLUMN] = cursorColumn; 
-									gemSelected = true;
-								break;
-							}
-							*/
 						}
 					}
 					
@@ -1146,7 +1106,6 @@ int main(int argc, char **argv){
 				case GAMESTATE_SWAP_LEFT:
 				case GAMESTATE_SWAP_RIGHT:
 
-					// std::cout << "GAMESTATE_SWAP_HORIZONTAL\n";
 					thisRow = selectedGems[0][ROW];
 					if (gameState == GAMESTATE_SWAP_LEFT)
 						thisColumn = selectedGems[0][COLUMN];
@@ -1165,7 +1124,6 @@ int main(int argc, char **argv){
 					{
 						numGemsSelected = 0;
 
-						// std::cout << "GEMSTATE_MOVE_LEFT\n";
 						// Swap with other gem
 						int temp = pGridArray[thisRow][thisColumn];
 						pGridArray[thisRow][thisColumn] = pGridArray[thisRow][thisColumn-1];
@@ -1187,8 +1145,8 @@ int main(int argc, char **argv){
 						bool foundMatch2 = false;
 						if (!cancelSwap)
 						{
-							foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn]]);
-							foundMatch2 = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn-1]]);
+							foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn]], &score);
+							foundMatch2 = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn-1]], &score);
 						}
 
 						if (foundMatch || foundMatch2)
@@ -1211,20 +1169,6 @@ int main(int argc, char **argv){
 							}
 		
 						}
-						// checkMatchAllRows(pGridArray, pGemsArray);
-						// gameState = GAMESTATE_AWAIT_INPUT;
-						// checkDrop(pGridArray, pGemsArray);
-
-
-						// for (int row = 0; row < NUM_ROWS; row++)
-						// {
-						// 	std::cout << "[";
-						// 	for (int column = 0; column < NUM_COLUMNS; column++)
-						// 	{
-						// 		std::cout << pGemsArray[pGridArray[row][column]].type << ",";
-						// 	}
-						// 	std::cout << "]\n";
-						// }
 					}					
 				break;
 
@@ -1250,7 +1194,6 @@ int main(int argc, char **argv){
 					{
 						numGemsSelected = 0;
 						
-						// std::cout << "GAMESTATE_MOVE_UP\n";
 						// Swap with other gem
 						int temp = pGridArray[thisRow][thisColumn];
 						pGridArray[thisRow][thisColumn] = pGridArray[thisRow-1][thisColumn];
@@ -1272,8 +1215,8 @@ int main(int argc, char **argv){
 						bool foundMatch2 = false;
 						if (!cancelSwap)
 						{
-							foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn]]);
-							foundMatch2 = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow-1][thisColumn]]);
+							foundMatch = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow][thisColumn]], &score);
+							foundMatch2 = checkMatchAfterSwap(pGridArray, pGemsArray, &pGemsArray[pGridArray[thisRow-1][thisColumn]], &score);
 						}
 
 						if (foundMatch || foundMatch2)
@@ -1295,20 +1238,6 @@ int main(int argc, char **argv){
 								cancelSwap = true;
 							}
 						}
-						// checkMatchAllRows(pGridArray, pGemsArray);
-						// gameState = GAMESTATE_AWAIT_INPUT;
-						// checkDrop(pGridArray, pGemsArray);
-
-
-						// for (int row = 0; row < NUM_ROWS; row++)
-						// {
-						// 	std::cout << "[";
-						// 	for (int column = 0; column < NUM_COLUMNS; column++)
-						// 	{
-						// 		std::cout << pGemsArray[pGridArray[row][column]].type << ",";
-						// 	}
-						// 	std::cout << "]\n";
-						// }
 					}					
 				break;
 
@@ -1321,8 +1250,8 @@ int main(int argc, char **argv){
 					}
 					else
 					{
-						gameState = GAMESTATE_AWAIT_INPUT;
-						// gameState = GAMESTATE_ADD_GEMS;
+						// gameState = GAMESTATE_AWAIT_INPUT;
+						gameState = GAMESTATE_ADD_GEMS;
 					}
 
 				break;
@@ -1475,6 +1404,11 @@ int main(int argc, char **argv){
 			if (e.type == SDL_KEYDOWN){
 				// quit = true;
 				paused = !paused;
+
+				// if (paused)
+				// {
+				// 	pauseStartTime = time(0);
+				// }
 			}
 			//If user clicks the mouse
 			if (e.type == SDL_MOUSEBUTTONDOWN){
@@ -1486,7 +1420,6 @@ int main(int argc, char **argv){
 				dragStartX = mouseX;
 				dragStartY = mouseY;
 				dragStarted = false;
-				std::cout << "Mouse down: mouseX = " << mouseX << "\n";
 			}
 			if (e.type == SDL_MOUSEBUTTONUP){
 				// if (!(e.button.x == mouseX && e.button.y == mouseY))
@@ -1501,7 +1434,6 @@ int main(int argc, char **argv){
 			{
 				if (e.motion.xrel < 0)		// Dragged left
 				{
-					std::cout << "dragStarted = " << dragStarted << "\n";
 					if (mouseX - e.motion.x > DRAG_DEAD_ZONE && !dragStarted)
 					{
 						// Start a new selection
