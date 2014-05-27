@@ -1,20 +1,23 @@
 #include <iostream>
 #include <SDL.h>
 #include <SDL_image.h>
-// #include <SDL_ttf.h>
+#include <SDL_ttf.h>
 // #include "Render.h"
 #include <time.h>
+#include <sstream>
+#include <string>
 
 const int SCREEN_WIDTH  = 640;
-const int SCREEN_HEIGHT = 480;
+const int GRID_HEIGHT = 480;
 const int NUM_ROWS = 8;
 const int NUM_COLUMNS = 8;
-const int ROW_HEIGHT = SCREEN_HEIGHT / NUM_ROWS;
+const int ROW_HEIGHT = GRID_HEIGHT / NUM_ROWS;
 const int COLUMN_WIDTH = SCREEN_WIDTH / NUM_COLUMNS;
 const int MAX_DROP_SPEED = 10;
 const int SWAP_SPEED = 10;
 const int NUM_GEM_TYPES = 5;
 const int DRAG_DEAD_ZONE = 30;
+const int HUD_HEIGHT = 30;
 
 const int GAMESTATE_INIT = 0;
 const int GAMESTATE_CHECKDROP = 1;
@@ -75,16 +78,10 @@ void logSDLError(std::ostream &os, const std::string &msg){
 * @param renderer The renderer to load the texture in
 * @return An SDL_Texture containing the rendered message, or nullptr if something went wrong
 */
-/*
-SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
-	SDL_Color color, int fontSize, SDL_Renderer *renderer)
+
+SDL_Texture* renderText(const std::string &message, TTF_Font *font,
+	SDL_Color color, SDL_Renderer *renderer)
 {
-	//Open the font
-	TTF_Font *font = TTF_OpenFont(fontFile.c_str(), fontSize);
-	if (font == nullptr){
-		logSDLError(std::cout, "TTF_OpenFont");
-		return nullptr;
-	}	
 	//We need to first render to a surface as that's what TTF_RenderText
 	//returns, then load that surface into a texture
 	SDL_Surface *surf = TTF_RenderText_Blended(font, message.c_str(), color);
@@ -99,10 +96,27 @@ SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
 	}
 	//Clean up the surface and font
 	SDL_FreeSurface(surf);
-	TTF_CloseFont(font);
+	// TTF_CloseFont(font);
 	return texture;
 }
-*/
+
+TTF_Font* loadFont(const std::string &fontFile, int fontSize)
+{
+	//Open the font
+	TTF_Font *font = TTF_OpenFont(fontFile.c_str(), fontSize);
+	if (font == nullptr){
+		logSDLError(std::cout, "TTF_OpenFont");
+		return nullptr;
+	}
+
+	return font;
+}
+
+void closeFont(TTF_Font *font)
+{
+	TTF_CloseFont(font);
+}
+
 
 /*
  * Loads an image into a texture on the rendering device
@@ -156,7 +170,7 @@ void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y){
 
 int** initGrid(gem* pGems)
 {
-	int rowHeight = SCREEN_HEIGHT / NUM_ROWS;
+	int rowHeight = GRID_HEIGHT / NUM_ROWS;
 	int testGridArray[NUM_ROWS][NUM_COLUMNS] = 
 						  {{1,2,0,0,0,0,0,0},
 						   {1,0,0,0,0,0,0,0},
@@ -902,12 +916,12 @@ int main(int argc, char **argv){
 		return 1;
 	}
 
-	// if (TTF_Init() != 0){
-	// logSDLError(std::cout, "TTF_Init");
-	// return 1;
-	// }
+	if (TTF_Init() != 0){
+	logSDLError(std::cout, "TTF_Init");
+	return 1;
+	}
 
-	SDL_Window *window = SDL_CreateWindow("Hello World!", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT,
+	SDL_Window *window = SDL_CreateWindow("Hello World!", 100, 100, SCREEN_WIDTH, GRID_HEIGHT + HUD_HEIGHT,
 	SDL_WINDOW_SHOWN);
 	if (window == nullptr){
 		logSDLError(std::cout, "CreateWindow");
@@ -943,6 +957,12 @@ int main(int argc, char **argv){
 		SDL_Quit();
 		return 4;
 	}
+
+	//We'll render the string "TTF fonts are cool!" in white
+	//Color is in RGB format
+	SDL_Color color = { 255, 255, 255 };
+	SDL_Texture *textImage;
+	TTF_Font* font = loadFont("res/sample.ttf", 32);
 
 	//Our event structure
 	SDL_Event e;
@@ -987,6 +1007,7 @@ int main(int argc, char **argv){
 	time_t timer;
 	time_t startTime;
 	// time_t pauseStartTime;
+	std::ostringstream os;
 
 	while (!quit)
 	{
@@ -1063,7 +1084,7 @@ int main(int argc, char **argv){
 						{
 							numGemsSelected = 0;
 						}
-						cursorRow = mouseY / ROW_HEIGHT;
+						cursorRow = (mouseY-HUD_HEIGHT) / ROW_HEIGHT;
 						cursorColumn = mouseX / COLUMN_WIDTH;
 
 						// Store the location of the selected gem
@@ -1084,7 +1105,7 @@ int main(int argc, char **argv){
 								numGemsSelected = 0;
 
 								// Set new cursor to this position
-								cursorRow = mouseY / ROW_HEIGHT;
+								cursorRow = (mouseY-HUD_HEIGHT) / ROW_HEIGHT;
 								cursorColumn = mouseX / COLUMN_WIDTH;
 
 								// Store the location of the selected gem
@@ -1515,7 +1536,7 @@ int main(int argc, char **argv){
 		}
 
 		// Draw the gems
-		// int rowHeight = SCREEN_HEIGHT / NUM_ROWS;
+		// int rowHeight = GRID_HEIGHT / NUM_ROWS;
 		int gemWidth, gemHeight;
 		int x, y;
 		SDL_QueryTexture(gems[0], NULL, NULL, &gemWidth, &gemHeight);
@@ -1527,13 +1548,13 @@ int main(int argc, char **argv){
 			SDL_QueryTexture(cursorYellowImg, NULL, NULL, &cursorWidth, &cursorHeight);
 			renderTexture(cursorYellowImg, renderer, 
 				selectedGems[0][COLUMN] * COLUMN_WIDTH + COLUMN_WIDTH/2 - cursorWidth/2, 
-				selectedGems[0][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2);
+				selectedGems[0][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2 + HUD_HEIGHT);
 		
 			if (numGemsSelected == 2)
 			{
 				renderTexture(cursorGreenImg, renderer, 
 					selectedGems[1][COLUMN] * COLUMN_WIDTH + COLUMN_WIDTH/2 - cursorWidth/2, 
-					selectedGems[1][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2);
+					selectedGems[1][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2 + HUD_HEIGHT);
 			}
 		}
 
@@ -1542,10 +1563,37 @@ int main(int argc, char **argv){
 			if (pGemsArray[i].type != -1)
 			{
 				x = COLUMN_WIDTH * pGemsArray[i].column + COLUMN_WIDTH/2 - gemWidth/2;
-				y = ROW_HEIGHT * pGemsArray[i].row + ROW_HEIGHT/2 - gemHeight/2;
+				y = ROW_HEIGHT * pGemsArray[i].row + ROW_HEIGHT/2 - gemHeight/2 + HUD_HEIGHT;
 				renderTexture(gems[pGemsArray[i].type], renderer, x + pGemsArray[i].x, y + pGemsArray[i].y);
 			}
 		}
+
+
+		os.str("");
+		os.clear();
+		os << "Score " << score;
+		textImage = renderText(os.str(), font, color, renderer);
+		if (textImage == nullptr){
+			return 1;
+		}
+		x = 10;
+		y = 10;
+		renderTexture(textImage, renderer, x, y);
+
+
+		os.str("");
+		os.clear();
+		os << "Time " << (timer - startTime);
+		textImage = renderText(os.str(), font, color, renderer);
+		if (textImage == nullptr){
+			return 1;
+		}
+		//Get the texture w/h so we can position it correctly on the screen
+		int iW, iH;
+		SDL_QueryTexture(textImage, NULL, NULL, &iW, &iH);
+		SDL_QueryTexture(textImage, NULL, NULL, &iW, &iH);
+		x = SCREEN_WIDTH -10 - iW;
+		renderTexture(textImage, renderer, x, y);
 
 		//Draw the texture
 		//SDL_RenderCopy(ren, tex, NULL, NULL);
@@ -1580,6 +1628,8 @@ int main(int argc, char **argv){
 	delete [] pGridArray;
 
 	delete [] pGemsArray;
+
+	closeFont(font);
 
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
