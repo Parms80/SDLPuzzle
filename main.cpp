@@ -1,7 +1,7 @@
 #include <iostream>
 #include <SDL.h>
 #include <SDL_image.h>
-#include <SDL_ttf.h>
+// #include <SDL_ttf.h>
 // #include "Render.h"
 #include <time.h>
 #include <sstream>
@@ -18,6 +18,8 @@ const int SWAP_SPEED = 10;
 const int NUM_GEM_TYPES = 5;
 const int DRAG_DEAD_ZONE = 30;
 const int HUD_HEIGHT = 30;
+const int TIMEOUT = 60;
+const int GAME_OVER_TIMEOUT = 3;
 
 const int GAMESTATE_INIT = 0;
 const int GAMESTATE_CHECKDROP = 1;
@@ -31,6 +33,8 @@ const int GAMESTATE_CHECK_MATCH = 8;
 const int GAMESTATE_INITIAL_CHECK_MATCH = 9;
 const int GAMESTATE_SWAP_HORIZONTAL = 10;
 const int GAMESTATE_ADD_GEMS = 11;
+const int GAMESTATE_TITLE_SCREEN = 12;
+const int GAMESTATE_GAME_OVER = 13;
 
 const int GEMSTATE_IDLE = 0;
 const int GEMSTATE_FALL = 1;
@@ -78,7 +82,7 @@ void logSDLError(std::ostream &os, const std::string &msg){
 * @param renderer The renderer to load the texture in
 * @return An SDL_Texture containing the rendered message, or nullptr if something went wrong
 */
-
+/*
 SDL_Texture* renderText(const std::string &message, TTF_Font *font,
 	SDL_Color color, SDL_Renderer *renderer)
 {
@@ -116,7 +120,7 @@ void closeFont(TTF_Font *font)
 {
 	TTF_CloseFont(font);
 }
-
+*/
 
 /*
  * Loads an image into a texture on the rendering device
@@ -916,10 +920,10 @@ int main(int argc, char **argv){
 		return 1;
 	}
 
-	if (TTF_Init() != 0){
-	logSDLError(std::cout, "TTF_Init");
-	return 1;
-	}
+	// if (TTF_Init() != 0){
+	// logSDLError(std::cout, "TTF_Init");
+	// return 1;
+	// }
 
 	SDL_Window *window = SDL_CreateWindow("Hello World!", 100, 100, SCREEN_WIDTH, GRID_HEIGHT + HUD_HEIGHT,
 	SDL_WINDOW_SHOWN);
@@ -960,15 +964,15 @@ int main(int argc, char **argv){
 
 	//We'll render the string "TTF fonts are cool!" in white
 	//Color is in RGB format
-	SDL_Color color = { 255, 255, 255 };
-	SDL_Texture *textImage;
-	TTF_Font* font = loadFont("res/sample.ttf", 32);
+	// SDL_Color color = { 255, 255, 255 };
+	// SDL_Texture *textImage;
+	// TTF_Font* font = loadFont("res/sample.ttf", 32);
 
 	//Our event structure
 	SDL_Event e;
 	//For tracking if we want to quit
 	bool quit = false;
-	int gameState = GAMESTATE_INIT;
+	int gameState = GAMESTATE_TITLE_SCREEN;
 	// Render* gameRenderer = new Render();
 	/*int gridArray[NUM_ROWS][NUM_COLUMNS] = 
 						  {{0,2,0,0,0,0,0,0},
@@ -1014,15 +1018,12 @@ int main(int argc, char **argv){
 		if (!paused)
 		{
 
-			timer = time(0);
-			// std::cout << "timer = " << timer << ", timer - startTime = " << (timer - startTime) << "\n";
-			if (timer - startTime >= 60)
-			{
-				std::cout << "Init\n";
-				gameState = GAMESTATE_INIT;
-			}
 			switch (gameState)
 			{
+				case GAMESTATE_TITLE_SCREEN:
+					// std::cout << "GAMESTATE_TITLE_SCREEN\n";
+				break;
+
 				case GAMESTATE_INIT:
 					for (int i = 0; i < NUM_ROWS*NUM_COLUMNS; i++)
 					{
@@ -1300,6 +1301,17 @@ int main(int argc, char **argv){
 					}
 				break;
 
+
+				case GAMESTATE_GAME_OVER:
+
+					std::cout << "GAMESTATE_GAME_OVER\n";
+					if (timer - startTime >= GAME_OVER_TIMEOUT)
+					{
+						gameState = GAMESTATE_TITLE_SCREEN;
+						startTime = time(0);
+					}
+				break;
+
 				case GAMESTATE_ADD_GEMS:
 
 					std::cout << "GAMESTATE_ADD_GEMS\n";
@@ -1364,54 +1376,63 @@ int main(int argc, char **argv){
 					}
 				break;
 
-				// case GAMESTATE_DROP_NEW_GEMS:
-
-
-				// break;
 			}
 
-			for (int row = NUM_ROWS-1; row >= 0; row--)
+			if (gameState != GAMESTATE_TITLE_SCREEN)
 			{
-				for (int column = 0; column < NUM_COLUMNS; column++)
+
+				for (int row = NUM_ROWS-1; row >= 0; row--)
 				{
-					gem* thisGem = &pGemsArray[pGridArray[row][column]];
-
-					switch (pGemsArray[pGridArray[row][column]].state)
+					for (int column = 0; column < NUM_COLUMNS; column++)
 					{
-						case GEMSTATE_IDLE:
-						break;
+						gem* thisGem = &pGemsArray[pGridArray[row][column]];
 
-						case GEMSTATE_FALL:
-						case GEMSTATE_ENTER:
-							// std::cout << "GEMSTATE_FALL: row "<<row<< ", column "<<column << "\n";
-							if ((pGemsArray[pGridArray[row][column]].type != -1 && pGemsArray[pGridArray[row+1][column]].type == -1) ||
-								pGemsArray[pGridArray[row][column]].state == GEMSTATE_ENTER)
-							{
-								// std::cout << "GEMSTATE_FALL: dropping gem at row = " << row << ", column " << column << 
-								// ", type " << pGemsArray[pGridArray[row][column]].type << "\n";
-								dropGem(pGridArray, &pGemsArray[pGridArray[row][column]], pGemsArray);
-							}
-						break;
+						switch (pGemsArray[pGridArray[row][column]].state)
+						{
+							case GEMSTATE_IDLE:
+							break;
 
-						case GEMSTATE_BOUNCE:
+							case GEMSTATE_FALL:
+							case GEMSTATE_ENTER:
+								// std::cout << "GEMSTATE_FALL: row "<<row<< ", column "<<column << "\n";
+								if ((pGemsArray[pGridArray[row][column]].type != -1 && pGemsArray[pGridArray[row+1][column]].type == -1) ||
+									pGemsArray[pGridArray[row][column]].state == GEMSTATE_ENTER)
+								{
+									// std::cout << "GEMSTATE_FALL: dropping gem at row = " << row << ", column " << column << 
+									// ", type " << pGemsArray[pGridArray[row][column]].type << "\n";
+									dropGem(pGridArray, &pGemsArray[pGridArray[row][column]], pGemsArray);
+								}
+							break;
 
-							thisGem->y += thisGem->velocity;
-							thisGem->velocity--;		
+							case GEMSTATE_BOUNCE:
 
-							// if (thisGem->row == 6 && thisGem->column == 2)
-							// {
-							// 	std::cout << "GEMSTATE_BOUNCE: y = " << thisGem->y << "\n";
-							// }
-							if (thisGem->y <= 0)
-							{
-								thisGem->y = 0;
-								thisGem->velocity = 0;
-								thisGem->state = GEMSTATE_IDLE;
-							}
-						break;
-					}	
+								thisGem->y += thisGem->velocity;
+								thisGem->velocity--;		
+
+								// if (thisGem->row == 6 && thisGem->column == 2)
+								// {
+								// 	std::cout << "GEMSTATE_BOUNCE: y = " << thisGem->y << "\n";
+								// }
+								if (thisGem->y <= 0)
+								{
+									thisGem->y = 0;
+									thisGem->velocity = 0;
+									thisGem->state = GEMSTATE_IDLE;
+								}
+							break;
+						}	
+					}
 				}
 			}
+		}
+
+		timer = time(0);
+		// std::cout << "timer = " << timer << ", timer - startTime = " << (timer - startTime) << "\n";
+		if (gameState != GAMESTATE_TITLE_SCREEN && gameState != GAMESTATE_GAME_OVER && timer - startTime >= TIMEOUT)
+		{
+			// std::cout << "Game over\n";
+			gameState = GAMESTATE_GAME_OVER;
+			startTime = time(0);
 		}
 
 		//Read user input & handle it
@@ -1433,18 +1454,26 @@ int main(int argc, char **argv){
 			}
 			//If user clicks the mouse
 			if (e.type == SDL_MOUSEBUTTONDOWN){
-				// std::cout << "x = " << (e.button.x) << "\n";
-				mouseX = e.button.x;
-				mouseY = e.button.y;
-				// gemSelected = true;
-				mouseDown = true;
-				dragStartX = mouseX;
-				dragStartY = mouseY;
-				dragStarted = false;
+				if (gameState == GAMESTATE_TITLE_SCREEN)
+				{
+					gameState = GAMESTATE_INIT;
+				}
+				else
+				{
+					// std::cout << "x = " << (e.button.x) << "\n";
+					mouseX = e.button.x;
+					mouseY = e.button.y;
+					// gemSelected = true;
+					mouseDown = true;
+					dragStartX = mouseX;
+					dragStartY = mouseY;
+					dragStarted = false;
+				}
 			}
 			if (e.type == SDL_MOUSEBUTTONUP){
-				// if (!(e.button.x == mouseX && e.button.y == mouseY))
+				if (gameState != GAMESTATE_TITLE_SCREEN)
 				{
+					std::cout << "Mouse up\n";
 					mouseDown = false;
 					// mouseX = e.button.x;
 					// mouseY = e.button.y;
@@ -1535,40 +1564,43 @@ int main(int argc, char **argv){
 			renderTexture(background, renderer, x * bW, y * bH);
 		}
 
-		// Draw the gems
-		// int rowHeight = GRID_HEIGHT / NUM_ROWS;
-		int gemWidth, gemHeight;
-		int x, y;
-		SDL_QueryTexture(gems[0], NULL, NULL, &gemWidth, &gemHeight);
-
-		// Draw cursors
-		if (numGemsSelected > 0)
+		if (gameState != GAMESTATE_TITLE_SCREEN && gameState != GAMESTATE_INIT)
 		{
-			int cursorWidth, cursorHeight;
-			SDL_QueryTexture(cursorYellowImg, NULL, NULL, &cursorWidth, &cursorHeight);
-			renderTexture(cursorYellowImg, renderer, 
-				selectedGems[0][COLUMN] * COLUMN_WIDTH + COLUMN_WIDTH/2 - cursorWidth/2, 
-				selectedGems[0][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2 + HUD_HEIGHT);
-		
-			if (numGemsSelected == 2)
+			// Draw the gems
+			// int rowHeight = GRID_HEIGHT / NUM_ROWS;
+			int gemWidth, gemHeight;
+			int x, y;
+			SDL_QueryTexture(gems[0], NULL, NULL, &gemWidth, &gemHeight);
+
+			// Draw cursors
+			if (numGemsSelected > 0)
 			{
-				renderTexture(cursorGreenImg, renderer, 
-					selectedGems[1][COLUMN] * COLUMN_WIDTH + COLUMN_WIDTH/2 - cursorWidth/2, 
-					selectedGems[1][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2 + HUD_HEIGHT);
+				int cursorWidth, cursorHeight;
+				SDL_QueryTexture(cursorYellowImg, NULL, NULL, &cursorWidth, &cursorHeight);
+				renderTexture(cursorYellowImg, renderer, 
+					selectedGems[0][COLUMN] * COLUMN_WIDTH + COLUMN_WIDTH/2 - cursorWidth/2, 
+					selectedGems[0][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2 + HUD_HEIGHT);
+			
+				if (numGemsSelected == 2)
+				{
+					renderTexture(cursorGreenImg, renderer, 
+						selectedGems[1][COLUMN] * COLUMN_WIDTH + COLUMN_WIDTH/2 - cursorWidth/2, 
+						selectedGems[1][ROW] * ROW_HEIGHT + ROW_HEIGHT/2 - cursorHeight/2 + HUD_HEIGHT);
+				}
+			}
+
+			for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++)
+			{
+				if (pGemsArray[i].type != -1)
+				{
+					x = COLUMN_WIDTH * pGemsArray[i].column + COLUMN_WIDTH/2 - gemWidth/2;
+					y = ROW_HEIGHT * pGemsArray[i].row + ROW_HEIGHT/2 - gemHeight/2 + HUD_HEIGHT;
+					renderTexture(gems[pGemsArray[i].type], renderer, x + pGemsArray[i].x, y + pGemsArray[i].y);
+				}
 			}
 		}
 
-		for (int i = 0; i < NUM_ROWS * NUM_COLUMNS; i++)
-		{
-			if (pGemsArray[i].type != -1)
-			{
-				x = COLUMN_WIDTH * pGemsArray[i].column + COLUMN_WIDTH/2 - gemWidth/2;
-				y = ROW_HEIGHT * pGemsArray[i].row + ROW_HEIGHT/2 - gemHeight/2 + HUD_HEIGHT;
-				renderTexture(gems[pGemsArray[i].type], renderer, x + pGemsArray[i].x, y + pGemsArray[i].y);
-			}
-		}
-
-
+/*
 		os.str("");
 		os.clear();
 		os << "Score " << score;
@@ -1594,7 +1626,7 @@ int main(int argc, char **argv){
 		SDL_QueryTexture(textImage, NULL, NULL, &iW, &iH);
 		x = SCREEN_WIDTH -10 - iW;
 		renderTexture(textImage, renderer, x, y);
-
+*/
 		//Draw the texture
 		//SDL_RenderCopy(ren, tex, NULL, NULL);
 		//Update the screen
@@ -1629,7 +1661,7 @@ int main(int argc, char **argv){
 
 	delete [] pGemsArray;
 
-	closeFont(font);
+	// closeFont(font);
 
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
