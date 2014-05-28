@@ -11,7 +11,7 @@ EXE = SDL_Puzzle
 all: $(EXE)
 
 $(EXE): main.o Render.o
-	$(CXX) $(LDFLAGS) $< -o $@
+	$(CXX) $(LDFLAGS) $^ -o $@
 
 Render.o: Render.cpp Render.h
 	$(CXX) $(CXXFLAGS) $< -o $@
