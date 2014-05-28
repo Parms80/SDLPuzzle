@@ -1,16 +1,16 @@
 #CXX = clang++
-#SDL = -framework SDL2 -framework SDL2_image -framework SDL2_ttf
-SDL = -framework SDL2 -framework SDL2_image
+SDL = -framework SDL2 -framework SDL2_image -framework SDL2_ttf
+#SDL = -framework SDL2 -framework SDL2_image
 # If your compiler is a bit older you may need to change -std=c++11 to -std=c++0x
 CXXFLAGS += -Wall -c -std=c++11 -I /System/Library/Frameworks/SDL2.framework/Headers
 CXXFLAGS += -Wall -c -std=c++11 -I /System/Library/Frameworks/SDL2_image.framework/Headers
-# CXXFLAGS += -Wall -c -std=c++11 -I /System/Library/Frameworks/SDL2_ttf.framework/Headers
+CXXFLAGS += -Wall -c -std=c++11 -I /System/Library/Frameworks/SDL2_ttf.framework/Headers
 LDFLAGS += $(SDL) -F /Library/Frameworks
 EXE = SDL_Puzzle
 
 all: $(EXE)
 
-$(EXE): main.o
+$(EXE): main.o Render.o
 	$(CXX) $(LDFLAGS) $< -o $@
 
 Render.o: Render.cpp Render.h
