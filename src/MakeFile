@@ -1,0 +1,35 @@
+#CXX = clang++
+SDL = -framework SDL2 -framework SDL2_image -framework SDL2_ttf
+# If your compiler is a bit older you may need to change -std=c++11 to -std=c++0x
+CXXFLAGS += -Wall -c -std=c++11 -I /System/Library/Frameworks/SDL2.framework/Headers
+CXXFLAGS += -Wall -c -std=c++11 -I /System/Library/Frameworks/SDL2_image.framework/Headers
+CXXFLAGS += -Wall -c -std=c++11 -I /System/Library/Frameworks/SDL2_ttf.framework/Headers
+LDFLAGS += $(SDL) -F /Library/Frameworks
+EXE = PSuman_King
+
+all: $(EXE)
+
+$(EXE): main.o Render.o text.o util.o constants.o gem.o
+	$(CXX) $(LDFLAGS) $^ -o $@
+
+
+util.o: util.cpp util.h
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+text.o: text.cpp text.h
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+Render.o: Render.cpp Render.h
+	$(CXX) $(CXXFLAGS) $< -o $@
+	
+main.o: main.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+constants.o: constants.h
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+gem.o: gem.h
+	$(CXX) $(CXXFLAGS) $< -o $@
+
+clean:
+	rm *.o && rm $(EXE)
